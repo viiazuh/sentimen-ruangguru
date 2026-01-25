@@ -7,36 +7,47 @@ import random
 # --- 1. SET PAGE CONFIG ---
 st.set_page_config(page_title="Sentiment Pro", page_icon="🙂", layout="wide")
 
-# --- 2. FORCE LIGHT MODE & FULL COMPONENT STYLING ---
+# --- 2. CSS SAKTI (Memaksa Light Mode & Fix Teks Sidebar) ---
 st.markdown("""
     <style>
-    /* 1. Paksa Warna Background Utama & Teks */
-    .stApp { background-color: #f7f9fc !important; color: #1f2937 !important; }
-    
-    /* 2. Styling Sidebar agar Teks Kelihatan */
+    /* Paksa warna dasar aplikasi */
+    .stApp { 
+        background-color: #f7f9fc !important; 
+        color: #1f2937 !important; 
+    }
+
+    /* FIX SIDEBAR: Pastikan background putih dan semua teks di dalamnya hitam/gelap */
     [data-testid="stSidebar"] { 
         background-color: white !important; 
         border-right: 1px solid #e5e7eb !important; 
     }
-    [data-testid="stSidebar"] * { color: #1f2937 !important; }
-    [data-testid="stSidebar"] .stMarkdown p { color: #4b5563 !important; font-size: 0.9rem; }
-    
-    /* 3. Paksa Text Area & File Uploader agar TIDAK HITAM */
+    [data-testid="stSidebar"] * { 
+        color: #1f2937 !important; 
+    }
+    /* Khusus untuk teks caption/kecil di bawah logo */
+    [data-testid="stSidebar"] .stMarkdown p, [data-testid="stSidebar"] .stCaption {
+        color: #6b7280 !important; 
+        opacity: 1 !important;
+    }
+
+    /* FIX INPUT: Pastikan Text Area dan File Uploader TIDAK HITAM */
     .stTextArea textarea {
         background-color: white !important;
         color: #1f2937 !important;
         border: 1px solid #d1d5db !important;
     }
+    
+    /* File Uploader Box */
     [data-testid="stFileUploader"] {
         background-color: white !important;
         border: 1px dashed #fb923c !important;
-        border-radius: 10px;
-        padding: 10px;
+        border-radius: 12px;
     }
-    /* Warna teks di dalam file uploader */
-    [data-testid="stFileUploader"] section { color: #1f2937 !important; }
+    [data-testid="stFileUploader"] section {
+        color: #1f2937 !important;
+    }
 
-    /* 4. Card Styling (Dashboard) */
+    /* Metric Card Styling (Dashboard) */
     .metric-card {
         background-color: white; padding: 24px; border-radius: 12px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #f3f4f6;
@@ -46,23 +57,18 @@ st.markdown("""
     .metric-value { color: #1f2937 !important; font-size: 2rem; font-weight: 700; margin-top: 8px; }
     .metric-sub { color: #9ca3af !important; font-size: 0.8rem; margin-top: 8px; }
     
-    /* 5. Icon Boxes */
     .icon-box { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
     .bg-blue { background-color: #dbeafe; color: #3b82f6; }
     .bg-green { background-color: #d1fae5; color: #10b981; }
     .bg-red { background-color: #fee2e2; color: #ef4444; }
     .bg-gray { background-color: #f3f4f6; color: #6b7280; }
 
-    /* 6. Button Styling Orange */
+    /* Button Styling Orange */
     .stButton>button {
         background: linear-gradient(135deg, #fb923c, #f97316) !important;
         color: white !important; border: none !important; border-radius: 8px !important;
         padding: 0.5rem 1.2rem !important; font-weight: 600 !important;
-        width: auto !important;
     }
-    
-    /* Perbaikan warna teks label input */
-    label p { color: #1f2937 !important; font-weight: 500 !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -95,18 +101,17 @@ if 'dataset' not in st.session_state:
 
 # --- 5. SIDEBAR ---
 with st.sidebar:
-    # Logo dengan warna spesifik
     st.markdown("<h2 style='color:#1f2937; margin-bottom:0;'>Sentiment<span style='color:#f97316;'>🙂</span></h2>", unsafe_allow_html=True)
-    st.markdown("<p style='margin-bottom:20px;'>Project Analisis Sentimen Ruangguru</p>", unsafe_allow_html=True)
+    st.markdown("<p style='color:#6b7280;'>Project Analisis Sentimen Ruangguru</p>", unsafe_allow_html=True)
+    st.write("")
     
     menu = st.radio("MAIN MENU", ["Dashboard", "Data Management", "Sentiment Prediction"])
     
-    st.markdown("<div style='margin-top: 50%;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top: 150px;'></div>", unsafe_allow_html=True)
     st.divider()
-    st.caption("© 2026 - Analisis Sentimen App")
+    st.caption("Developed for Thesis Project © 2026")
 
-# --- 6. PAGE ROUTING ---
-
+# --- 6. DASHBOARD ---
 if menu == "Dashboard":
     st.markdown("<h2 style='color:#1f2937;'>Dashboard</h2>", unsafe_allow_html=True)
     st.write("Overview Statistik")
@@ -128,6 +133,7 @@ if menu == "Dashboard":
     else:
         st.info("Belum ada aktivitas analisis.")
 
+# --- DATA MANAGEMENT ---
 elif menu == "Data Management":
     st.markdown("<h2 style='color:#1f2937;'>Data Management</h2>", unsafe_allow_html=True)
     st.write("Kelola dataset ulasan Anda")
@@ -160,6 +166,7 @@ elif menu == "Data Management":
             st.session_state.dataset = None
             st.rerun()
 
+# --- SENTIMENT PREDICTION ---
 elif menu == "Sentiment Prediction":
     st.markdown("<h2 style='color:#1f2937;'>Sentiment Prediction</h2>", unsafe_allow_html=True)
     st.write("Coba analisis teks tunggal")
