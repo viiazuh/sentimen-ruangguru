@@ -7,35 +7,62 @@ import random
 # --- 1. SET PAGE CONFIG ---
 st.set_page_config(page_title="Sentiment Pro", page_icon="🙂", layout="wide")
 
-# --- 2. FORCE LIGHT MODE & CUSTOM CSS (Orange Theme) ---
+# --- 2. FORCE LIGHT MODE & FULL COMPONENT STYLING ---
 st.markdown("""
     <style>
+    /* 1. Paksa Warna Background Utama & Teks */
     .stApp { background-color: #f7f9fc !important; color: #1f2937 !important; }
-    [data-testid="stSidebar"] { background-color: white !important; border-right: 1px solid #e5e7eb !important; }
     
-    /* Card Styling */
+    /* 2. Styling Sidebar agar Teks Kelihatan */
+    [data-testid="stSidebar"] { 
+        background-color: white !important; 
+        border-right: 1px solid #e5e7eb !important; 
+    }
+    [data-testid="stSidebar"] * { color: #1f2937 !important; }
+    [data-testid="stSidebar"] .stMarkdown p { color: #4b5563 !important; font-size: 0.9rem; }
+    
+    /* 3. Paksa Text Area & File Uploader agar TIDAK HITAM */
+    .stTextArea textarea {
+        background-color: white !important;
+        color: #1f2937 !important;
+        border: 1px solid #d1d5db !important;
+    }
+    [data-testid="stFileUploader"] {
+        background-color: white !important;
+        border: 1px dashed #fb923c !important;
+        border-radius: 10px;
+        padding: 10px;
+    }
+    /* Warna teks di dalam file uploader */
+    [data-testid="stFileUploader"] section { color: #1f2937 !important; }
+
+    /* 4. Card Styling (Dashboard) */
     .metric-card {
         background-color: white; padding: 24px; border-radius: 12px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #f3f4f6;
         display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;
     }
-    .metric-title { color: #6b7280; font-size: 0.9rem; font-weight: 500; }
-    .metric-value { color: #1f2937; font-size: 2rem; font-weight: 700; margin-top: 8px; }
-    .metric-sub { color: #9ca3af; font-size: 0.8rem; margin-top: 8px; }
+    .metric-title { color: #6b7280 !important; font-size: 0.9rem; font-weight: 500; }
+    .metric-value { color: #1f2937 !important; font-size: 2rem; font-weight: 700; margin-top: 8px; }
+    .metric-sub { color: #9ca3af !important; font-size: 0.8rem; margin-top: 8px; }
     
-    /* Icon Boxes */
+    /* 5. Icon Boxes */
     .icon-box { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
     .bg-blue { background-color: #dbeafe; color: #3b82f6; }
     .bg-green { background-color: #d1fae5; color: #10b981; }
     .bg-red { background-color: #fee2e2; color: #ef4444; }
     .bg-gray { background-color: #f3f4f6; color: #6b7280; }
 
-    /* Button Styling Orange */
+    /* 6. Button Styling Orange */
     .stButton>button {
         background: linear-gradient(135deg, #fb923c, #f97316) !important;
         color: white !important; border: none !important; border-radius: 8px !important;
         padding: 0.5rem 1.2rem !important; font-weight: 600 !important;
+        width: auto !important;
     }
+    
+    /* Perbaikan warna teks label input */
+    label p { color: #1f2937 !important; font-weight: 500 !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -46,7 +73,6 @@ def clean_text(text):
     return text.strip()
 
 def get_prediction(text):
-    # Dummy logic untuk tim ML nanti
     pos_words = ["bagus", "puas", "mantap", "keren", "oke"]
     neg_words = ["buruk", "kecewa", "parah", "jelek", "lambat"]
     score = 0
@@ -69,16 +95,20 @@ if 'dataset' not in st.session_state:
 
 # --- 5. SIDEBAR ---
 with st.sidebar:
-    st.markdown("<h2 style='color:#1f2937;'>Sentiment<span style='color:#f97316;'>🙂</span></h2>", unsafe_allow_html=True)
+    # Logo dengan warna spesifik
+    st.markdown("<h2 style='color:#1f2937; margin-bottom:0;'>Sentiment<span style='color:#f97316;'>🙂</span></h2>", unsafe_allow_html=True)
+    st.markdown("<p style='margin-bottom:20px;'>Project Analisis Sentimen Ruangguru</p>", unsafe_allow_html=True)
+    
     menu = st.radio("MAIN MENU", ["Dashboard", "Data Management", "Sentiment Prediction"])
+    
+    st.markdown("<div style='margin-top: 50%;'></div>", unsafe_allow_html=True)
     st.divider()
-    st.caption("Project Analisis Sentimen Ruangguru")
+    st.caption("© 2026 - Analisis Sentimen App")
 
 # --- 6. PAGE ROUTING ---
 
-# --- DASHBOARD ---
 if menu == "Dashboard":
-    st.header("Dashboard")
+    st.markdown("<h2 style='color:#1f2937;'>Dashboard</h2>", unsafe_allow_html=True)
     st.write("Overview Statistik")
     s = st.session_state.stats
     c1, c2, c3, c4 = st.columns(4)
@@ -98,12 +128,12 @@ if menu == "Dashboard":
     else:
         st.info("Belum ada aktivitas analisis.")
 
-# --- DATA MANAGEMENT ---
 elif menu == "Data Management":
-    st.header("Data Management")
+    st.markdown("<h2 style='color:#1f2937;'>Data Management</h2>", unsafe_allow_html=True)
     st.write("Kelola dataset ulasan Anda")
     
-    with st.container(border=True):
+    with st.container():
+        st.markdown('<div style="background-color:white; padding:20px; border-radius:12px; border:1px solid #e5e7eb;">', unsafe_allow_html=True)
         uploaded_file = st.file_uploader("Upload file CSV atau Excel", type=["csv", "xlsx"])
         
         if uploaded_file:
@@ -120,6 +150,7 @@ elif menu == "Data Management":
                         results.append({"Real Text": txt, "Clean Text": clean_text(txt), "Prediksi": sentiment})
                     st.session_state.dataset = pd.DataFrame(results)
                     st.success("Analisis selesai!")
+        st.markdown('</div>', unsafe_allow_html=True)
 
     if st.session_state.dataset is not None:
         st.divider()
@@ -129,18 +160,18 @@ elif menu == "Data Management":
             st.session_state.dataset = None
             st.rerun()
 
-# --- SENTIMENT PREDICTION ---
 elif menu == "Sentiment Prediction":
-    st.header("Sentiment Prediction")
+    st.markdown("<h2 style='color:#1f2937;'>Sentiment Prediction</h2>", unsafe_allow_html=True)
     st.write("Coba analisis teks tunggal")
     
-    with st.container(border=True):
+    with st.container():
+        st.markdown('<div style="background-color:white; padding:20px; border-radius:12px; border:1px solid #e5e7eb;">', unsafe_allow_html=True)
         input_text = st.text_area("Masukkan teks ulasan", placeholder="Ketik di sini...", height=150)
+        
         if st.button("Analisis Sentimen"):
             if input_text:
                 res, emo, conf = get_prediction(input_text)
                 
-                # Update Stats Global
                 st.session_state.stats["total"] += 1
                 st.session_state.stats[res.lower()] += 1
                 st.session_state.history.insert(0, {"Teks": input_text, "Hasil": res, "Waktu": time.strftime("%H:%M:%S")})
@@ -151,3 +182,4 @@ elif menu == "Sentiment Prediction":
                 col_conf.progress(conf/100, text=f"Tingkat Keyakinan: {conf}%")
             else:
                 st.warning("Masukkan teks terlebih dahulu!")
+        st.markdown('</div>', unsafe_allow_html=True)
