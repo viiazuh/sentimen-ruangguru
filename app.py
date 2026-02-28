@@ -74,12 +74,13 @@ def get_prediction(text):
         # --- KODE RONTGEN (TAMBAHKAN INI) ---
         st.info(f"Teks Bersih: {cleaned}")
         st.warning(f"Sequence Tokenizer: {seq}")
+        st.error(f"Probabilitas Asli: {prediction}")
         # ------------------------------------
         
         prediction = model_ml.predict(padded)
         
-        labels = ["Positif", "Netral", "Negatif"] 
-        emojis = ["😀", "😐", "😞"]
+        labels = ["Negatif", "Netral", "Positif"]
+        emojis = ["😞", "😐", "😀"]
         
         
         idx = np.argmax(prediction)
