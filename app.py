@@ -79,7 +79,7 @@ def get_prediction(text):
         prediction = model_ml.predict(padded)
         
         # 4. Ambil label (asumsi urutan label: Negatif, Netral, Positif)
-        labels = ["Negatif", "Netral", "Positif"]
+        labels = ["Negatif", "Netral", "Positif"] 
         emojis = ["😞", "😐", "😀"]
         
         idx = np.argmax(prediction)
