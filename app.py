@@ -69,7 +69,7 @@ def get_prediction(text):
     if model_ml:
         cleaned = clean_text(text)
         seq = tokenizer_ml.texts_to_sequences([cleaned])
-        padded = tf.keras.preprocessing.sequence.pad_sequences(seq, maxlen=100) # Ganti 100 kalau di skripsi angkanya beda
+        padded = tf.keras.preprocessing.sequence.pad_sequences(seq, maxlen=100, padding='post')
         
         # --- KODE RONTGEN (TAMBAHKAN INI) ---
         st.info(f"Teks Bersih: {cleaned}")
@@ -78,7 +78,7 @@ def get_prediction(text):
         
         prediction = model_ml.predict(padded)
         
-        labels = ["Netral", "Positif", "Negatif"] # Pastikan ini sudah sesuai urutan
+        labels = ["Netral", "Positif", "Negatif"] 
         emojis = ["😐", "😀", "😞"]
         
         idx = np.argmax(prediction)
