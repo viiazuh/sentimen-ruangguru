@@ -78,8 +78,8 @@ def get_prediction(text):
         
         prediction = model_ml.predict(padded)
         
-        labels = ["Netral", "Positif", "Negatif"] 
-        emojis = ["😐", "😀", "😞"]
+        labels = ["Negatif", "Netral", "Positif"]
+        emojis = ["😞", "😐", "😀"]
         
         idx = np.argmax(prediction)
         conf = float(np.max(prediction) * 100)
