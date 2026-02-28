@@ -68,19 +68,18 @@ def clean_text(text):
 def get_prediction(text):
     if model_ml:
         cleaned = clean_text(text)
-        
-        # 1. Ubah teks ke sequence angka
         seq = tokenizer_ml.texts_to_sequences([cleaned])
+        padded = tf.keras.preprocessing.sequence.pad_sequences(seq, maxlen=100) # Ganti 100 kalau di skripsi angkanya beda
         
-        # 2. Padding (Sesuaikan maxlen dengan saat kamu training, misal 100)
-        padded = tf.keras.preprocessing.sequence.pad_sequences(seq, maxlen=100)
+        # --- KODE RONTGEN (TAMBAHKAN INI) ---
+        st.info(f"Teks Bersih: {cleaned}")
+        st.warning(f"Sequence Tokenizer: {seq}")
+        # ------------------------------------
         
-        # 3. Predict
         prediction = model_ml.predict(padded)
         
-        # 4. Ambil label (Urutan standar LabelEncoder: Negatif, Netral, Positif)
-        labels = ["Negatif", "Netral", "Positif"] 
-        emojis = ["😞", "😐", "😀"]
+        labels = ["Netral", "Positif", "Negatif"] # Pastikan ini sudah sesuai urutan
+        emojis = ["😐", "😀", "😞"]
         
         idx = np.argmax(prediction)
         conf = float(np.max(prediction) * 100)
@@ -88,7 +87,6 @@ def get_prediction(text):
         return labels[idx], emojis[idx], int(conf)
     
     return "Error", "⚠️", 0
-
 # --- 5. SESSION STATE ---
 if 'stats' not in st.session_state:
     st.session_state.stats = {"total": 0, "positif": 0, "negatif": 0, "netral": 0}
