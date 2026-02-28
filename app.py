@@ -44,7 +44,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. MODEL LOADING (TEMPAT TIM ML BEKERJA) ---
+# --- 3. MODEL LOADING ---
 @st.cache_resource
 def load_sentiment_model():
     model = tf.keras.models.load_model('models/model_hybrid_coc.h5')
@@ -60,7 +60,6 @@ model_ml, tokenizer_ml, norm_dict = load_sentiment_model()
 def clean_text(text):
     text = str(text).lower()
     text = re.sub(r'[^\w\s]', '', text)
-    # Gunakan normalization dict untuk perbaiki kata
     words = text.split()
     normalized_words = [norm_dict.get(word, word) for word in words]
     return " ".join(normalized_words).strip()
@@ -69,12 +68,15 @@ def get_prediction(text):
     if model_ml:
         cleaned = clean_text(text)
         seq = tokenizer_ml.texts_to_sequences([cleaned])
-        padded = tf.keras.preprocessing.sequence.pad_sequences(seq, maxlen=100, padding='post')
+        padded = tf.keras.preprocessing.sequence.pad_sequences(seq, maxlen=100)
         
         prediction = model_ml.predict(padded)
         
-        labels = ["Netral", "Positif", "Negatif"] 
-        emojis = ["😐", "😀", "😞"]
+        # FIX: Urutan label disesuaikan dengan konvensi training
+        # 0 = Negatif, 1 = Netral, 2 = Positif (urutan alfabetis LabelEncoder sklearn)
+        # Jika hasil masih salah, cek label_encoder.classes_ di notebook training kamu
+        labels = ["Negatif", "Netral", "Positif"]
+        emojis = ["😞", "😐", "😀"]
         
         idx = np.argmax(prediction)
         conf = float(np.max(prediction) * 100)
@@ -82,6 +84,7 @@ def get_prediction(text):
         return labels[idx], emojis[idx], int(conf)
     
     return "Error", "⚠️", 0
+
 # --- 5. SESSION STATE ---
 if 'stats' not in st.session_state:
     st.session_state.stats = {"total": 0, "positif": 0, "negatif": 0, "netral": 0}
@@ -137,7 +140,7 @@ elif menu == "Data Management":
                 with st.spinner("Sedang menganalisis dataset..."):
                     results = []
                     for i, row in df.iterrows():
-                        txt = str(row.iloc[0]) # Mengasumsikan teks ada di kolom pertama
+                        txt = str(row.iloc[0])
                         sentiment, _, _ = get_prediction(txt)
                         results.append({"Ulasan": txt, "Cleaned": clean_text(txt), "Sentimen": sentiment})
                     st.session_state.dataset = pd.DataFrame(results)
