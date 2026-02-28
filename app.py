@@ -71,11 +71,12 @@ def get_prediction(text):
         seq = tokenizer_ml.texts_to_sequences([cleaned])
         padded = tf.keras.preprocessing.sequence.pad_sequences(seq, maxlen=100, padding='post')
         
-        prediction = model_ml.predict(padded)
+        
         
         labels = ["Netral", "Positif", "Negatif"] 
         emojis = ["😐", "😀", "😞"]
-        
+
+        prediction = model_ml.predict(padded)
         idx = np.argmax(prediction)
         conf = float(np.max(prediction) * 100)
         
