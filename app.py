@@ -3,7 +3,10 @@ import pandas as pd
 import time
 import re
 import random
-import joblib  
+import joblib
+import tensorflow as tf  
+import numpy as np       
+import pickle            
 
 # --- 1. SET PAGE CONFIG ---
 st.set_page_config(page_title="Sentiment Pro", page_icon="🙂", layout="wide")
@@ -45,39 +48,46 @@ st.markdown("""
 @st.cache_resource
 def load_sentiment_model():
     model = tf.keras.models.load_model('models/model_hybrid_coc.h5')
-    # model = joblib.load('path_ke_model.pkl') # Nanti diisi ini
-    # vectorizer = joblib.load('path_ke_vectorizer.pkl') # Nanti diisi ini
-    return None # Sementara return None
+    with open('models/tokenizer.pkl', 'rb') as f:
+        tokenizer = pickle.load(f)
+    with open('models/normalization_dicts.pkl', 'rb') as f:
+        norm_dict = pickle.load(f)
+    return model, tokenizer, norm_dict
 
-model_ml = load_sentiment_model()
+model_ml, tokenizer_ml, norm_dict = load_sentiment_model()
 
 # --- 4. LOGIC PREPROCESSING & PREDICTION ---
 def clean_text(text):
     text = str(text).lower()
     text = re.sub(r'[^\w\s]', '', text)
-    return text.strip()
+    # Gunakan normalization dict untuk perbaiki kata
+    words = text.split()
+    normalized_words = [norm_dict.get(word, word) for word in words]
+    return " ".join(normalized_words).strip()
 
 def get_prediction(text):
-    # JIKA MODEL SUDAH ADA, GUNAKAN LOGIK INI:
-    # if model_ml:
-    #     vec_text = vectorizer.transform([clean_text(text)])
-    #     pred = model_ml.predict(vec_text)[0]
-    #     conf = model_ml.predict_proba(vec_text).max() * 100
-    #     return pred, "Emoji", int(conf)
-
-    # DUMMY LOGIC (UNTUK TESTING UI SEKARANG)
-    pos_words = ["bagus", "puas", "mantap", "keren", "oke"]
-    neg_words = ["buruk", "kecewa", "parah", "jelek", "lambat"]
-    score = 0
-    cleaned = clean_text(text)
-    for w in pos_words: 
-        if w in cleaned: score += 1
-    for w in neg_words: 
-        if w in cleaned: score -= 1
+    if model_ml:
+        cleaned = clean_text(text)
+        
+        # 1. Ubah teks ke sequence angka
+        seq = tokenizer_ml.texts_to_sequences([cleaned])
+        
+        # 2. Padding (Sesuaikan maxlen dengan saat kamu training, misal 100)
+        padded = tf.keras.preprocessing.sequence.pad_sequences(seq, maxlen=100)
+        
+        # 3. Predict
+        prediction = model_ml.predict(padded)
+        
+        # 4. Ambil label (asumsi urutan label: Negatif, Netral, Positif)
+        labels = ["Negatif", "Netral", "Positif"]
+        emojis = ["😞", "😐", "😀"]
+        
+        idx = np.argmax(prediction)
+        conf = float(np.max(prediction) * 100)
+        
+        return labels[idx], emojis[idx], int(conf)
     
-    if score > 0: return "Positif", "😀", random.randint(75, 98)
-    if score < 0: return "Negatif", "😞", random.randint(70, 95)
-    return "Netral", "😐", random.randint(50, 70)
+    return "Error", "⚠️", 0
 
 # --- 5. SESSION STATE ---
 if 'stats' not in st.session_state:
