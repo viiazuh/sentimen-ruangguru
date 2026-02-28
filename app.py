@@ -70,14 +70,14 @@ def get_prediction(text):
         cleaned = clean_text(text)
         seq = tokenizer_ml.texts_to_sequences([cleaned])
         padded = tf.keras.preprocessing.sequence.pad_sequences(seq, maxlen=100, padding='post')
-        
+        prediction = model_ml.predict(padded)
         # --- KODE RONTGEN (TAMBAHKAN INI) ---
         st.info(f"Teks Bersih: {cleaned}")
         st.warning(f"Sequence Tokenizer: {seq}")
-        st.write(f"Angka Asli Model: {prediction}")
+        st.success(f"Angka Asli Model: {prediction}")
         # ------------------------------------
         
-        prediction = model_ml.predict(padded)
+        
         
         labels = ["Netral", "Positif", "Negatif"] 
         emojis = ["😐", "😀", "😞"]
