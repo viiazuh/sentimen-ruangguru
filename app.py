@@ -78,7 +78,7 @@ def get_prediction(text):
         # 3. Predict
         prediction = model_ml.predict(padded)
         
-        # 4. Ambil label (asumsi urutan label: Negatif, Netral, Positif)
+        # 4. Ambil label (Urutan standar LabelEncoder: Negatif, Netral, Positif)
         labels = ["Negatif", "Netral", "Positif"] 
         emojis = ["😞", "😐", "😀"]
         
