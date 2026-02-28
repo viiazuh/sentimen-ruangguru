@@ -3,7 +3,7 @@ import pandas as pd
 import time
 import re
 import random
-import joblib  # Persiapkan library ini untuk load model nanti
+import joblib  
 
 # --- 1. SET PAGE CONFIG ---
 st.set_page_config(page_title="Sentiment Pro", page_icon="🙂", layout="wide")
@@ -44,10 +44,7 @@ st.markdown("""
 # --- 3. MODEL LOADING (TEMPAT TIM ML BEKERJA) ---
 @st.cache_resource
 def load_sentiment_model():
-    """
-    Fungsi ini untuk me-load model Machine Learning.
-    Gunakan @st.cache_resource agar model tidak di-load berulang kali (berat).
-    """
+    model = tf.keras.models.load_model('models/model_hybrid_coc.h5')
     # model = joblib.load('path_ke_model.pkl') # Nanti diisi ini
     # vectorizer = joblib.load('path_ke_vectorizer.pkl') # Nanti diisi ini
     return None # Sementara return None
