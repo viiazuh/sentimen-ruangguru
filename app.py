@@ -105,7 +105,7 @@ with st.sidebar:
     menu = st.radio("MAIN MENU", ["Dashboard", "Data Management", "Sentiment Prediction"], label_visibility="collapsed")
     st.markdown("<div style='margin-top: 200px;'></div>", unsafe_allow_html=True)
     st.divider()
-    st.caption("Developed for Thesis Project © 2026")
+
 
 # --- 7. PAGE ROUTING ---
 
