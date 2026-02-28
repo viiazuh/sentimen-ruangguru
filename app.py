@@ -71,10 +71,7 @@ def get_prediction(text):
         padded = tf.keras.preprocessing.sequence.pad_sequences(seq, maxlen=100)
         
         prediction = model_ml.predict(padded)
-        
-        # FIX: Urutan label disesuaikan dengan konvensi training
-        # 0 = Negatif, 1 = Netral, 2 = Positif (urutan alfabetis LabelEncoder sklearn)
-        # Jika hasil masih salah, cek label_encoder.classes_ di notebook training kamu
+        st.write("RAW SCORES:", prediction)  
         labels = ["Negatif", "Netral", "Positif"]
         emojis = ["😞", "😐", "😀"]
         
