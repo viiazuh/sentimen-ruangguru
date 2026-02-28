@@ -71,12 +71,6 @@ def get_prediction(text):
         seq = tokenizer_ml.texts_to_sequences([cleaned])
         padded = tf.keras.preprocessing.sequence.pad_sequences(seq, maxlen=100, padding='post')
         
-        # --- KODE RONTGEN (TAMBAHKAN INI) ---
-        st.info(f"Teks Bersih: {cleaned}")
-        st.warning(f"Sequence Tokenizer: {seq}")
-        
-        # ------------------------------------
-        
         prediction = model_ml.predict(padded)
         
         labels = ["Netral", "Positif", "Negatif"] 
