@@ -24,24 +24,6 @@ st.markdown("""
     .stTextArea textarea { background-color: white !important; color: #1f2937 !important; border: 1px solid #d1d5db !important; }
     [data-testid="stFileUploader"] { background-color: white !important; border: 2px dashed #fb923c !important; border-radius: 12px !important; }
     [data-testid="stFileUploaderDropzone"] { background-color: #ffffff !important; }
-    
-    /* STYLE LABEL SKRIPSI */
-    .label-skripsi {
-        display: inline-block;
-        background-color: #fb923c;
-        color: white;
-        border-radius: 50%;
-        width: 28px;
-        height: 28px;
-        text-align: center;
-        line-height: 28px;
-        font-weight: bold;
-        margin-right: 10px;
-        font-size: 16px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        vertical-align: middle;
-    }
-
     .metric-card {
         background-color: white; padding: 24px; border-radius: 12px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #f3f4f6;
@@ -65,16 +47,12 @@ st.markdown("""
 # ---  MODEL LOADING ---
 @st.cache_resource
 def load_sentiment_model():
-    # Tips: Kalau mau SS tapi model gagal load, ganti baris ini sementara jadi: return None, None, None
-    try:
-        model = tf.keras.models.load_model('models/model_hybrid_coc.h5')
-        with open('models/tokenizer.pkl', 'rb') as f:
-            tokenizer = pickle.load(f)
-        with open('models/normalization_dicts.pkl', 'rb') as f:
-            norm_dict = pickle.load(f)
-        return model, tokenizer, norm_dict
-    except:
-        return None, None, None
+    model = tf.keras.models.load_model('models/model_hybrid_coc.h5')
+    with open('models/tokenizer.pkl', 'rb') as f:
+        tokenizer = pickle.load(f)
+    with open('models/normalization_dicts.pkl', 'rb') as f:
+        norm_dict = pickle.load(f)
+    return model, tokenizer, norm_dict
 
 model_ml, tokenizer_ml, norm_dict = load_sentiment_model()
 
@@ -87,11 +65,18 @@ def clean_text(text):
 def normalize_text(text):
     text = clean_text(text)
     words = text.split()
-    normalized = [norm_dict.get(word, word) for word in words] if norm_dict else words
+    normalized = [norm_dict.get(word, word) for word in words]
     return " ".join(normalized).strip()
 
 def get_stopwords():
-    return set(['yang', 'dan', 'di', 'ke', 'dari', 'ini', 'itu', 'untuk', 'dengan'])
+    return set([
+        'yang', 'dan', 'di', 'ke', 'dari', 'ini', 'itu', 'untuk', 'dengan',
+        'adalah', 'pada', 'juga', 'dalam', 'ada', 'tidak', 'saya', 'kami',
+        'kita', 'mereka', 'akan', 'sudah', 'bisa', 'karena', 'lebih', 'atau',
+        'tapi', 'kalau', 'jika', 'maka', 'sangat', 'sekali', 'saja', 'aja',
+        'nya', 'lah', 'deh', 'dong', 'nih', 'sih', 'ya', 'yg', 'dgn', 'utk',
+        'dr', 'sy', 'gw', 'gue', 'lo', 'lu', 'aku', 'kamu', 'dia'
+    ])
 
 def remove_stopwords(text):
     stopwords = get_stopwords()
@@ -125,11 +110,16 @@ def get_prediction(text):
         emojis = ["😐", "😞", "😀"]
         idx = np.argmax(prediction)
         conf = float(np.max(prediction) * 100)
-        return labels[idx], emojis[idx], int(conf)
-    # Mock data buat screenshot kalau model gagal load
-    return "Positif", "😀", 98
+        scores = {
+            "positif": float(prediction[0][2] * 100),
+            "negatif": float(prediction[0][1] * 100),
+            "netral":  float(prediction[0][0] * 100),
+        }
+        return labels[idx], emojis[idx], int(conf), scores
+    return "Error", "⚠️", 0, {}
 
 def build_excel(df_result):
+    """Coba buat Excel, fallback ke CSV kalau semua engine gagal"""
     excel_buffer = io.BytesIO()
     for engine in ['xlsxwriter', 'openpyxl']:
         try:
@@ -162,22 +152,21 @@ with st.sidebar:
     st.markdown("<div style='margin-top: 200px;'></div>", unsafe_allow_html=True)
     st.divider()
 
+
 # DASHBOARD PAGE
+
 if menu == "Dashboard":
     st.markdown("<h2 style='color:#1f2937;'>Dashboard</h2>", unsafe_allow_html=True)
-    # Penempatan a: Panel Metrik Statistik
-    st.markdown("<b><span class='label-skripsi'>a</span> Overview Statistik Real-time</b>", unsafe_allow_html=True)
+    st.write("Overview Statistik Real-time")
     
     s = st.session_state.stats
     c1, c2, c3, c4 = st.columns(4)
-    # Penempatan b: Visualisasi Ikonik (Ditaruh di samping icon)
     with c1: st.markdown(f'<div class="metric-card"><div><div class="metric-title">Total Data</div><div class="metric-value">{s["total"]}</div></div><div class="icon-box bg-blue">📊</div></div>', unsafe_allow_html=True)
-    with c2: st.markdown(f'<div class="metric-card"><div><div class="metric-title">Positif</div><div class="metric-value">{s["positif"]}</div></div><div class="icon-box bg-green"><span class="label-skripsi" style="width:20px;height:20px;line-height:20px;font-size:12px;margin:0;">b</span>😊</div></div>', unsafe_allow_html=True)
+    with c2: st.markdown(f'<div class="metric-card"><div><div class="metric-title">Positif</div><div class="metric-value">{s["positif"]}</div></div><div class="icon-box bg-green">😊</div></div>', unsafe_allow_html=True)
     with c3: st.markdown(f'<div class="metric-card"><div><div class="metric-title">Negatif</div><div class="metric-value">{s["negatif"]}</div></div><div class="icon-box bg-red">😞</div></div>', unsafe_allow_html=True)
     with c4: st.markdown(f'<div class="metric-card"><div><div class="metric-title">Netral</div><div class="metric-value">{s["netral"]}</div></div><div class="icon-box bg-gray">😐</div></div>', unsafe_allow_html=True)
 
-    # Penempatan c: Tabel Riwayat Analisis
-    st.markdown("### <span class='label-skripsi'>c</span> Aktivitas Terbaru", unsafe_allow_html=True)
+    st.subheader("Aktivitas Terbaru")
     if st.session_state.history:
         st.dataframe(pd.DataFrame(st.session_state.history), use_container_width=True)
     else:
@@ -189,20 +178,118 @@ elif menu == "Data Management":
     st.write("Proses dataset dalam jumlah besar (CSV/Excel)")
     
     with st.container(border=True):
-        # Penempatan a: Komponen File Uploader
-        st.markdown("<b><span class='label-skripsi'>a</span> Upload dataset ulasan</b>", unsafe_allow_html=True)
-        uploaded_file = st.file_uploader("", type=["csv", "xlsx"], label_visibility="collapsed")
+        uploaded_file = st.file_uploader("Upload dataset ulasan", type=["csv", "xlsx"])
         
         if uploaded_file is not None:
-            # Penempatan b: Panel Pratinjau Data
-            st.markdown("<b><span class='label-skripsi'>b</span> Preview 10 Data Teratas:</b>", unsafe_allow_html=True)
-            # Logika load filemu tetap di sini...
-            st.info(f"File {uploaded_file.name} terbaca.")
+            if st.session_state.uploaded_filename != uploaded_file.name:
+                try:
+                    if uploaded_file.name.endswith('.csv'):
+                        df_upload = pd.read_csv(uploaded_file, on_bad_lines='skip', engine='python')
+                    else:
+                        df_upload = pd.read_excel(uploaded_file)
+                    st.session_state.uploaded_df = df_upload
+                    st.session_state.uploaded_filename = uploaded_file.name
+                    st.session_state.dataset = None
+                except Exception as e:
+                    st.error(f"Gagal membaca file: {e}")
+
+        if st.session_state.uploaded_df is not None:
+            df = st.session_state.uploaded_df
+            st.write(f"📁 File: **{st.session_state.uploaded_filename}** — {len(df)} baris data")
+            st.write("Preview 10 Data Teratas:")
+            st.dataframe(df.head(10), use_container_width=True)
             
-            # Penempatan c: Tombol Kontrol Operasi
-            st.write("")
-            st.markdown("<b><span class='label-skripsi'>c</span> Tombol Kontrol Operasi</b>", unsafe_allow_html=True)
-            st.button("🔍 Jalankan Batch Analysis")
+            col_btn1, col_btn2 = st.columns([2, 6])
+            with col_btn1:
+                run_analysis = st.button("🔍 Jalankan Batch Analysis")
+            with col_btn2:
+                if st.button("🗑️ Hapus File"):
+                    st.session_state.uploaded_df = None
+                    st.session_state.uploaded_filename = None
+                    st.session_state.dataset = None
+                    st.rerun()
+
+            if run_analysis:
+                with st.spinner("Sedang menganalisis dataset..."):
+                    total = len(df)
+                    text_col = None
+                    for candidate in ['textDisplay', 'text', 'ulasan', 'review', 'komentar', 'content']:
+                        if candidate in df.columns:
+                            text_col = candidate
+                            break
+                    if text_col is None:
+                        text_col = df.columns[0]
+                    texts_asli = df[text_col].astype(str).tolist()
+
+                    progress_bar = st.progress(0, text="Step 1/3: Preprocessing teks...")
+                    texts_clean      = [clean_text(t)           for t in texts_asli]
+                    texts_normalized = [normalize_text(t)       for t in texts_asli]
+                    texts_stopword   = [remove_stopwords(n)     for n in texts_normalized]
+                    texts_stemmed    = [stem_text(s)            for s in texts_stopword]
+                    progress_bar.progress(0.33, text="Step 2/3: Tokenisasi & padding...")
+
+                    seqs   = tokenizer_ml.texts_to_sequences(texts_normalized)
+                    padded = tf.keras.preprocessing.sequence.pad_sequences(seqs, maxlen=100, padding='post')
+                    progress_bar.progress(0.66, text="Step 3/3: Prediksi model (batch)...")
+
+                    all_preds = model_ml.predict(padded, batch_size=512, verbose=0)
+                    progress_bar.progress(1.0, text="Menyusun hasil...")
+
+                    labels = ["Netral", "Negatif", "Positif"]
+                    idxs   = np.argmax(all_preds, axis=1)
+                    confs  = np.max(all_preds, axis=1) * 100
+
+                    results = []
+                    for i in range(total):
+                        idx  = idxs[i]
+                        pred = all_preds[i]
+                        results.append({
+                            "Text Asli":       texts_asli[i],
+                            "Text Cleaned":    texts_clean[i],
+                            "Text Normalized": texts_normalized[i],
+                            "Text Stopword":   texts_stopword[i],
+                            "Text Stemmed":    texts_stemmed[i],
+                            "Sentimen":        labels[idx],
+                            "Positif (%)":     round(float(pred[2]) * 100, 2),
+                            "Negatif (%)":     round(float(pred[1]) * 100, 2),
+                            "Netral (%)":      round(float(pred[0]) * 100, 2),
+                            "Keyakinan (%)":   int(confs[i]),
+                        })
+
+                    st.session_state.dataset = pd.DataFrame(results)
+                    st.success(f"✅ Batch Analysis Selesai! {total} data diproses.")
+
+    if st.session_state.dataset is not None:
+        with st.container(border=True):
+            st.markdown("### Hasil Analisis")
+
+            df_result = st.session_state.dataset
+            cnt = df_result["Sentimen"].value_counts()
+            r1, r2, r3, r4 = st.columns(4)
+            r1.metric("Total",      len(df_result))
+            r2.metric("😀 Positif", cnt.get("Positif", 0))
+            r3.metric("😞 Negatif", cnt.get("Negatif", 0))
+            r4.metric("😐 Netral",  cnt.get("Netral",  0))
+
+            st.dataframe(df_result, use_container_width=True)
+            csv_data = df_result.to_csv(index=False).encode('utf-8')
+            excel_data, excel_ok = build_excel(df_result)
+
+            c1, c2, c3 = st.columns([1, 1, 5])
+            with c1:
+                st.download_button("⬇️ CSV", csv_data, "hasil_sentimen.csv", "text/csv")
+            with c2:
+                if excel_ok:
+                    st.download_button("⬇️ Excel", excel_data, "hasil_sentimen.xlsx",
+                                       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                else:
+                    st.warning("Excel tidak tersedia.")
+            with c3:
+                col_spacer, col_hapus = st.columns([4, 1])
+                with col_hapus:
+                    if st.button("🗑️ Hapus Hasil"):
+                        st.session_state.dataset = None
+                        st.rerun()
 
 # SENTIMENT PREDICTION PAGE
 elif menu == "Sentiment Prediction":
@@ -211,17 +298,19 @@ elif menu == "Sentiment Prediction":
     
     with st.container(border=True):
         st.subheader("Sentiment Analysis")
-        # Penempatan a: Input Text Area
-        st.markdown("<b><span class='label-skripsi'>a</span> Masukkan teks ulasan</b>", unsafe_allow_html=True)
-        input_text = st.text_area("", placeholder="Contoh: Aplikasi ini sangat membantu...", height=150, label_visibility="collapsed")
+        input_text = st.text_area("Masukkan teks ulasan", placeholder="Contoh: Aplikasi ini sangat membantu dalam belajar...", height=150)
         
-        st.write("")
-        # Penempatan b: Tombol Analisis
-        st.markdown("<b><span class='label-skripsi'>b</span> Tombol Analisis</b>", unsafe_allow_html=True)
         if st.button("Analisis Sentimen Sekarang"):
             if input_text:
-                res, emo, conf = get_prediction(input_text)
+                res, emo, conf, scores = get_prediction(input_text)
+                
+                st.session_state.stats["total"] += 1
+                st.session_state.stats[res.lower()] += 1
+                st.session_state.history.insert(0, {"Teks": input_text, "Hasil": res, "Waktu": time.strftime("%H:%M:%S")})
+                
                 st.divider()
-                # Penempatan c: Panel Output Prediksi
-                st.markdown(f"### <span class='label-skripsi'>c</span> Hasil: {res} {emo}", unsafe_allow_html=True)
-                st.progress(conf/100, text=f"Tingkat Keyakinan: {conf}%")
+                col_res, col_conf = st.columns(2)
+                col_res.markdown(f"### Hasil: {res} {emo}")
+                col_conf.progress(conf/100, text=f"Tingkat Keyakinan: {conf}%")
+            else:
+                st.warning("Silakan ketikkan ulasan terlebih dahulu.")
