@@ -148,7 +148,7 @@ with st.sidebar:
     st.markdown("<h2 style='margin-bottom:0;'>Sentiment<span style='color:#f97316;'>🙂</span></h2>", unsafe_allow_html=True)
     st.markdown("<p>Project Analisis Sentimen Ruangguru</p>", unsafe_allow_html=True)
     st.write("")
-    # menu = st.radio("MAIN MENU", ["Dashboard", "Data Management", "Sentiment Prediction"], label_visibility="collapsed")
+    menu = st.radio("MAIN MENU", ["Dashboard", "Data Management", "Sentiment Prediction"], label_visibility="collapsed")
     # st.markdown("<div style='margin-top: 200px;'></div>", unsafe_allow_html=True)
     # st.divider()
 
