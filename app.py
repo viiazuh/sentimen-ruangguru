@@ -298,7 +298,7 @@ elif menu == "Sentiment Prediction":
     
     with st.container(border=True):
         st.subheader("Sentiment Analysis")
-        input_text = st.text_area("Masukkan teks ulasan", placeholder="Contoh: Aplikasi ini sangat membantu dalam belajar...", height=150)
+        input_text = st.text_area("Masukkan teks ulasan", placeholder="Contoh: keren banget acaranya...", height=150)
         
         if st.button("Analisis Sentimen Sekarang"):
             if input_text:
