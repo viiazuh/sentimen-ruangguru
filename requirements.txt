@@ -3,3 +3,5 @@ pandas
 tensorflow
 numpy
 scikit-learn
+openpyxl
+xlsxwriter
