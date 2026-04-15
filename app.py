@@ -14,32 +14,81 @@ st.set_page_config(page_title="Sentiment Pro", page_icon="🙂", layout="wide")
 
 st.markdown("""
     <style>
-    .stApp { background-color: #f7f9fc !important; color: #1f2937 !important; }
+    /* 1. IMPORT FONT INTER AGAR SAMA DENGAN FIGMA */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    html, body, [class*="css"], .stApp {
+        font-family: 'Inter', sans-serif !important;
+    }
+
+    /* 2. COLORS & BACKGROUND */
+    .stApp { 
+        background-color: #f7f9fc !important; 
+        color: #1f2937 !important; 
+    }
+
+    /* 3. SIDEBAR STYLING */
     [data-testid="stSidebar"] { 
         background-color: white !important; 
         border-right: 1px solid #e5e7eb !important; 
+        padding-top: 2rem;
     }
-    [data-testid="stSidebar"] * { color: #1f2937 !important; }
-    [data-testid="stSidebar"] .stMarkdown p { color: #4b5563 !important; font-size: 0.95rem; font-weight: 500; }
-    .stTextArea textarea { background-color: white !important; color: #1f2937 !important; border: 1px solid #d1d5db !important; }
-    [data-testid="stFileUploader"] { background-color: white !important; border: 2px dashed #fb923c !important; border-radius: 12px !important; }
-    [data-testid="stFileUploaderDropzone"] { background-color: #ffffff !important; }
+    
+    /* Menyesuaikan teks sidebar agar tidak terlalu gelap/pudar */
+    [data-testid="stSidebar"] .stMarkdown p { 
+        color: #4b5563 !important; 
+        font-size: 0.95rem; 
+        font-weight: 500; 
+        margin-bottom: -10px;
+    }
+
+    /* 4. MARGIN & CARD STYLING (Dashboard) */
     .metric-card {
-        background-color: white; padding: 24px; border-radius: 12px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #f3f4f6;
-        display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;
+        background-color: white; 
+        padding: 20px; 
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
+        border: 1px solid #f3f4f6;
+        margin-bottom: 1rem;
     }
-    .metric-title { color: #6b7280 !important; font-size: 0.9rem; }
-    .metric-value { color: #1f2937 !important; font-size: 2rem; font-weight: 700; margin-top: 8px; }
-    .icon-box { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-    .bg-blue { background-color: #dbeafe; color: #3b82f6; }
-    .bg-green { background-color: #d1fae5; color: #10b981; }
-    .bg-red { background-color: #fee2e2; color: #ef4444; }
-    .bg-gray { background-color: #f3f4f6; color: #6b7280; }
+    
+    .metric-title { 
+        color: #6b7280 !important; 
+        font-size: 0.85rem; 
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+    }
+
+    .metric-value { 
+        color: #1f2937 !important; 
+        font-size: 1.75rem; 
+        font-weight: 700; 
+    }
+
+    /* 5. CUSTOM TABLE (Dataframe) */
+    /* Membuat tabel Streamlit terlihat lebih clean mirip Figma */
+    [data-testid="stDataFrame"] {
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    /* 6. BUTTONS */
     .stButton>button {
-        background: linear-gradient(135deg, #fb923c, #f97316) !important;
-        color: white !important; border: none !important; border-radius: 8px !important;
-        padding: 0.6rem 1.5rem !important; font-weight: 600 !important;
+        background: #f97316 !important; /* Warna Orange Figma */
+        color: white !important; 
+        border: none !important; 
+        border-radius: 8px !important;
+        padding: 0.5rem 1.5rem !important; 
+        font-weight: 600 !important;
+        width: 100%; /* Biar responsif di mobile */
+    }
+    
+    /* Responsivitas untuk layar kecil */
+    @media (max-width: 768px) {
+        .metric-card { padding: 15px; }
+        .metric-value { font-size: 1.5rem; }
     }
     </style>
     """, unsafe_allow_html=True)
