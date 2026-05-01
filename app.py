@@ -24,7 +24,7 @@ if not firebase_admin._apps:
 
 db = firestore.client()
 
-# --- CUSTOM CSS (UI FIGMA MATCH) ---
+# --- CUSTOM CSS (PRESISI FIGMA) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -35,37 +35,46 @@ st.markdown("""
     
     .stApp { background-color: #f7f9fc !important; color: #1f2937 !important; }
 
-    /* SIDEBAR STYLING - FIGMA MATCH */
+    /* SIDEBAR CONTAINER */
     [data-testid="stSidebar"] { 
         background-color: white !important; 
         border-right: 1px solid #e5e7eb !important; 
+    }
+    
+    [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
         padding-top: 2rem;
     }
-    
-    /* Title Sentiment :) */
+
+    /* HEADER SIDEBAR */
     .sidebar-title {
-        font-size: 1.5rem;
+        font-size: 24px;
         font-weight: 700;
-        color: #1f2937;
-        margin-bottom: 0.5rem;
-        padding-left: 1.5rem;
+        color: #1e293b;
+        margin-bottom: 8px;
     }
     
-    /* Subtitle Project */
     .sidebar-subtitle {
-        font-size: 0.9rem;
-        color: #6b7280;
-        margin-bottom: 2rem;
-        padding-left: 1.5rem;
-        line-height: 1.2;
+        font-size: 16px;
+        color: #1e293b;
+        margin-bottom: 40px;
+        font-weight: 400;
     }
 
-    /* Radio Button Spacing */
-    [data-testid="stSidebar"] [data-testid="stWidgetLabel"] { display: none; }
-    
+    /* RADIO MENU STYLING (FIGMA MATCH) */
     div.row-widget.stRadio > div {
-        padding-left: 1rem;
-        gap: 1rem; /* Jarak antar menu */
+        gap: 15px; /* Jarak antar item menu */
+    }
+
+    /* Hilangkan label bawaan radio Streamlit */
+    [data-testid="stSidebar"] [data-testid="stWidgetLabel"] { display: none; }
+
+    /* Gaya Text pada Radio Button */
+    [data-testid="stSidebar"] label {
+        font-size: 18px !important;
+        font-weight: 400 !important;
+        color: #000000 !important;
     }
 
     /* DASHBOARD CARD */
@@ -77,7 +86,7 @@ st.markdown("""
         border: 1px solid #f3f4f6; 
         margin-bottom: 1rem; 
     }
-    .metric-title { color: #6b7280; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.025em; }
+    .metric-title { color: #6b7280; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; }
     .metric-value { color: #1f2937; font-size: 1.75rem; font-weight: 700; }
 
     /* BUTTONS */
@@ -86,13 +95,12 @@ st.markdown("""
         color: white !important; 
         border-radius: 8px !important; 
         font-weight: 600 !important; 
-        width: 100%; 
         border: none !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- HELPER FUNCTIONS ---
+# --- FIREBASE HELPERS ---
 def save_to_firebase(text, result, confidence):
     try:
         db.collection("history_sentiment").add({
@@ -153,11 +161,12 @@ if 'dataset' not in st.session_state: st.session_state.dataset = None
 if 'uploaded_df' not in st.session_state: st.session_state.uploaded_df = None
 if 'uploaded_filename' not in st.session_state: st.session_state.uploaded_filename = None
 
-# --- SIDEBAR NAVIGATION ---
+# --- SIDEBAR NAVIGATION (FIGMA MATCH) ---
 with st.sidebar:
     st.markdown('<div class="sidebar-title">Sentiment🙂</div>', unsafe_allow_html=True)
     st.markdown('<div class="sidebar-subtitle">Project Analisis Sentimen Ruangguru</div>', unsafe_allow_html=True)
-    menu = st.radio("MENU", ["Dashboard", "Data Management", "Sentiment Prediction"])
+    # Menu Radio dengan CSS jarak khusus
+    menu = st.radio("NAVIGATION", ["Dashboard", "Data Management", "Sentiment Prediction"])
 
 # --- DASHBOARD ---
 if menu == "Dashboard":
@@ -190,13 +199,13 @@ elif menu == "Data Management":
             st.write(f"📁 **{st.session_state.uploaded_filename}** — {len(df)} baris")
             st.dataframe(df.head(5), use_container_width=True)
             
-            c1, c2 = st.columns([2, 6])
+            c1, c2 = st.columns([3, 7])
             if c1.button("🔍 Jalankan Batch Analysis"):
                 with st.spinner("Menganalisis..."):
-                    text_col = next((c for c in ['text', 'ulasan', 'komentar'] if c in df.columns), df.columns[0])
+                    text_col = next((c for c in ['text', 'ulasan', 'komentar', 'textDisplay'] if c in df.columns), df.columns[0])
                     texts = df[text_col].astype(str).tolist()
-                    
                     prog = st.progress(0)
+                    
                     normalized = [normalize_text(t) for t in texts]
                     prog.progress(0.4)
                     
@@ -219,20 +228,21 @@ elif menu == "Data Management":
     if st.session_state.dataset is not None:
         st.dataframe(st.session_state.dataset, use_container_width=True)
         
-        # DOWNLOAD BUTTONS
+        # DOWNLOAD SECTION
+        st.markdown("### Export Hasil")
         col_dl1, col_dl2 = st.columns(2)
         
-        # CSV
+        # CSV Export
         csv = st.session_state.dataset.to_csv(index=False).encode('utf-8')
-        col_dl1.download_button("⬇️ Download CSV", csv, "hasil.csv", "text/csv")
+        col_dl1.download_button("⬇️ Download CSV", csv, "hasil_analisis.csv", "text/csv")
         
-        # EXCEL
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        # Excel Export
+        excel_buffer = io.BytesIO()
+        with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
             st.session_state.dataset.to_excel(writer, index=False, sheet_name='Sentimen')
-        col_dl2.download_button("⬇️ Download Excel", output.getvalue(), "hasil.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        col_dl2.download_button("⬇️ Download Excel", excel_buffer.getvalue(), "hasil_analisis.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-# --- PREDICTION ---
+# --- SENTIMENT PREDICTION ---
 elif menu == "Sentiment Prediction":
     st.markdown("<h2>Sentiment Prediction</h2>", unsafe_allow_html=True)
     input_text = st.text_area("Masukkan teks ulasan", height=150)
