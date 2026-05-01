@@ -3,9 +3,9 @@ import pandas as pd
 import time
 import re
 import joblib
-import tensorflow as tf  
-import numpy as np        
-import pickle             
+import tensorflow as tf
+import numpy as np
+import pickle
 import io
 import os
 import firebase_admin
@@ -76,7 +76,7 @@ st.markdown("""
         color: #000000 !important;
     }
 
-    /* DASHBOARD CARD */
+    /* DASHBOARD & DATA MANAGEMENT METRIC CARD */
     .metric-card { 
         background-color: white; 
         padding: 20px; 
@@ -88,12 +88,23 @@ st.markdown("""
     .metric-title { color: #6b7280; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; }
     .metric-value { color: #1f2937; font-size: 1.75rem; font-weight: 700; }
 
+    /* BUTTONS */
     .stButton>button { 
         background: #f97316 !important; 
         color: white !important; 
         border-radius: 8px !important; 
         font-weight: 600 !important; 
         border: none !important;
+        width: 100%;
+    }
+    
+    /* Tombol Download Khusus agar lebih kecil/rapi */
+    [data-testid="stDownloadButton"] > button {
+        background: #ffffff !important;
+        color: #1f2937 !important;
+        border: 1px solid #e5e7eb !important;
+        border-radius: 8px !important;
+        font-weight: 500 !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -194,55 +205,77 @@ if menu == "Dashboard":
 # --- DATA MANAGEMENT ---
 elif menu == "Data Management":
     st.markdown("<h2>Data Management</h2>", unsafe_allow_html=True)
-    with st.container(border=True):
-        uploaded_file = st.file_uploader("Upload dataset ulasan", type=["csv", "xlsx"])
-        if uploaded_file:
-            if st.session_state.uploaded_filename != uploaded_file.name:
-                st.session_state.uploaded_df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
-                st.session_state.uploaded_filename = uploaded_file.name
-                st.session_state.dataset = None
+    
+    uploaded_file = st.file_uploader("Upload dataset ulasan", type=["csv", "xlsx"])
+    if uploaded_file:
+        if st.session_state.uploaded_filename != uploaded_file.name:
+            st.session_state.uploaded_df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
+            st.session_state.uploaded_filename = uploaded_file.name
+            st.session_state.dataset = None
 
-        if st.session_state.uploaded_df is not None:
-            df = st.session_state.uploaded_df
-            st.write(f"📁 **{st.session_state.uploaded_filename}** — {len(df)} baris")
-            st.dataframe(df.head(5), use_container_width=True)
-            
-            c1, c2 = st.columns([2, 6])
-            if c1.button("🔍 Jalankan Batch Analysis"):
-                with st.spinner("Menganalisis..."):
-                    text_col = next((c for c in ['text', 'ulasan', 'komentar', 'textDisplay'] if c in df.columns), df.columns[0])
-                    texts = df[text_col].astype(str).tolist()
-                    
-                    prog = st.progress(0)
-                    normalized = [normalize_text(t) for t in texts]
-                    prog.progress(0.4)
-                    
-                    seqs = tokenizer_ml.texts_to_sequences(normalized)
-                    padded = tf.keras.preprocessing.sequence.pad_sequences(seqs, maxlen=100, padding='post')
-                    preds = model_ml.predict(padded, batch_size=512, verbose=0)
-                    prog.progress(1.0)
-                    
-                    labels = ["Netral", "Negatif", "Positif"]
-                    st.session_state.dataset = pd.DataFrame({
-                        "Text": texts, 
-                        "Sentimen": [labels[np.argmax(p)] for p in preds],
-                        "Skor (%)": [int(np.max(p)*100) for p in preds]
-                    })
-            if c2.button("🗑️ Hapus"):
-                st.session_state.uploaded_df = None
-                st.session_state.dataset = None
-                st.rerun()
+    if st.session_state.uploaded_df is not None:
+        df_view = st.session_state.uploaded_df
+        st.write(f"📁 **{st.session_state.uploaded_filename}** — {len(df_view)} baris")
+        st.dataframe(df_view.head(5), use_container_width=True)
+        
+        if st.button("🔍 Jalankan Batch Analysis"):
+            with st.spinner("Menganalisis..."):
+                text_col = next((c for c in ['text', 'ulasan', 'komentar', 'textDisplay'] if c in df_view.columns), df_view.columns[0])
+                texts = df_view[text_col].astype(str).tolist()
+                prog = st.progress(0)
+                
+                normalized = [normalize_text(t) for t in texts]
+                prog.progress(0.4)
+                
+                seqs = tokenizer_ml.texts_to_sequences(normalized)
+                padded = tf.keras.preprocessing.sequence.pad_sequences(seqs, maxlen=100, padding='post')
+                preds = model_ml.predict(padded, batch_size=512, verbose=0)
+                prog.progress(1.0)
+                
+                labels = ["Netral", "Negatif", "Positif"]
+                res_list = [labels[np.argmax(p)] for p in preds]
+                conf_list = [int(np.max(p)*100) for p in preds]
+                
+                st.session_state.dataset = pd.DataFrame({
+                    "Text Asli": texts, 
+                    "Sentimen": res_list,
+                    "Keyakinan (%)": conf_list
+                })
 
     if st.session_state.dataset is not None:
-        st.dataframe(st.session_state.dataset, use_container_width=True)
-        st.markdown("### Export Hasil")
-        col_dl1, col_dl2 = st.columns(2)
-        csv = st.session_state.dataset.to_csv(index=False).encode('utf-8')
-        col_dl1.download_button("⬇️ Download CSV", csv, "hasil.csv", "text/csv")
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            st.session_state.dataset.to_excel(writer, index=False, sheet_name='Sentimen')
-        col_dl2.download_button("⬇️ Download Excel", output.getvalue(), "hasil.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        st.divider()
+        st.subheader("Hasil Analisis")
+        
+        # --- METRICS BAR (Sesuai Gambar) ---
+        res_df = st.session_state.dataset
+        total_n = len(res_df)
+        p_n = len(res_df[res_df['Sentimen'] == "Positif"])
+        neg_n = len(res_df[res_df['Sentimen'] == "Negatif"])
+        net_n = len(res_df[res_df['Sentimen'] == "Netral"])
+        
+        m1, m2, m3, m4 = st.columns(4)
+        with m1: st.markdown(f'<div class="metric-card"><div class="metric-title">Total</div><div class="metric-value">{total_n}</div></div>', unsafe_allow_html=True)
+        with m2: st.markdown(f'<div class="metric-card"><div class="metric-title">😊 Positif</div><div class="metric-value">{p_n}</div></div>', unsafe_allow_html=True)
+        with m3: st.markdown(f'<div class="metric-card"><div class="metric-title">😞 Negatif</div><div class="metric-value">{neg_n}</div></div>', unsafe_allow_html=True)
+        with m4: st.markdown(f'<div class="metric-card"><div class="metric-title">😐 Netral</div><div class="metric-value">{net_n}</div></div>', unsafe_allow_html=True)
+        
+        # --- TABEL HASIL ---
+        st.dataframe(res_df, use_container_width=True)
+        
+        # --- DOWNLOAD & DELETE ACTION BAR (Sesuai Gambar: Kiri Download, Kanan Hapus) ---
+        col_csv, col_excel, col_spacer, col_del = st.columns([1.2, 1.2, 5, 2])
+        
+        csv_data = res_df.to_csv(index=False).encode('utf-8')
+        col_csv.download_button("📥 CSV", csv_data, "hasil_sentimen.csv", "text/csv", use_container_width=True)
+        
+        output_excel = io.BytesIO()
+        with pd.ExcelWriter(output_excel, engine='xlsxwriter') as writer:
+            res_df.to_excel(writer, index=False, sheet_name='Sentimen')
+        col_excel.download_button("📥 Excel", output_excel.getvalue(), "hasil_sentimen.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+        
+        if col_del.button("🗑️ Hapus Hasil"):
+            st.session_state.dataset = None
+            st.rerun()
 
 # --- PREDICTION ---
 elif menu == "Sentiment Prediction":
