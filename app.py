@@ -7,10 +7,22 @@ import tensorflow as tf
 import numpy as np       
 import pickle            
 import io
+import firebase_admin
+from firebase_admin import credentials, firestore
 
 # ---  SET PAGE CONFIG ---
 st.set_page_config(page_title="Sentiment Pro", page_icon="🙂", layout="wide")
 
+# --- INISIALISASI FIREBASE ---
+# Pastikan file firebase-key.json sudah ada di folder yang sama dengan file ini
+if not firebase_admin._apps:
+    try:
+        cred = credentials.Certificate("firebase-key.json")
+        firebase_admin.initialize_app(cred)
+    except Exception as e:
+        st.error(f"Gagal menghubungkan ke Firebase: {e}")
+
+db = firestore.client()
 
 st.markdown("""
     <style>
@@ -34,7 +46,6 @@ st.markdown("""
         padding-top: 2rem;
     }
     
-    /* Menyesuaikan teks sidebar agar tidak terlalu gelap/pudar */
     [data-testid="stSidebar"] .stMarkdown p { 
         color: #4b5563 !important; 
         font-size: 0.95rem; 
@@ -67,7 +78,6 @@ st.markdown("""
     }
 
     /* 5. CUSTOM TABLE (Dataframe) */
-    /* Membuat tabel Streamlit terlihat lebih clean mirip Figma */
     [data-testid="stDataFrame"] {
         border: 1px solid #e5e7eb;
         border-radius: 12px;
@@ -76,16 +86,15 @@ st.markdown("""
 
     /* 6. BUTTONS */
     .stButton>button {
-        background: #f97316 !important; /* Warna Orange Figma */
+        background: #f97316 !important; 
         color: white !important; 
         border: none !important; 
         border-radius: 8px !important;
         padding: 0.5rem 1.5rem !important; 
         font-weight: 600 !important;
-        width: 100%; /* Biar responsif di mobile */
+        width: 100%; 
     }
     
-    /* Responsivitas untuk layar kecil */
     @media (max-width: 768px) {
         .metric-card { padding: 15px; }
         .metric-value { font-size: 1.5rem; }
@@ -96,12 +105,16 @@ st.markdown("""
 # ---  MODEL LOADING ---
 @st.cache_resource
 def load_sentiment_model():
-    model = tf.keras.models.load_model('models/model_hybrid_coc.h5')
-    with open('models/tokenizer.pkl', 'rb') as f:
-        tokenizer = pickle.load(f)
-    with open('models/normalization_dicts.pkl', 'rb') as f:
-        norm_dict = pickle.load(f)
-    return model, tokenizer, norm_dict
+    try:
+        model = tf.keras.models.load_model('models/model_hybrid_coc.h5')
+        with open('models/tokenizer.pkl', 'rb') as f:
+            tokenizer = pickle.load(f)
+        with open('models/normalization_dicts.pkl', 'rb') as f:
+            norm_dict = pickle.load(f)
+        return model, tokenizer, norm_dict
+    except Exception:
+        # Pengecekan error agar web tetap jalan meski model belum diload sempurna
+        return None, None, {}
 
 model_ml, tokenizer_ml, norm_dict = load_sentiment_model()
 
@@ -168,7 +181,6 @@ def get_prediction(text):
     return "Error", "⚠️", 0, {}
 
 def build_excel(df_result):
-    """Coba buat Excel, fallback ke CSV kalau semua engine gagal"""
     excel_buffer = io.BytesIO()
     for engine in ['xlsxwriter', 'openpyxl']:
         try:
@@ -180,11 +192,28 @@ def build_excel(df_result):
             continue
     return None, False
 
-# ---  SESSION STATE ---
-if 'stats' not in st.session_state:
-    st.session_state.stats = {"total": 0, "positif": 0, "negatif": 0, "netral": 0}
-if 'history' not in st.session_state:
-    st.session_state.history = []
+# --- FUNGSI AMBIL DATA FIREBASE (UNTUK DASHBOARD) ---
+def get_firebase_stats():
+    try:
+        stats_ref = db.collection("global_stats").document("current_stats").get()
+        if stats_ref.exists:
+            return stats_ref.to_dict()
+    except Exception:
+        pass
+    return {"total": 0, "positif": 0, "negatif": 0, "netral": 0}
+
+def get_firebase_history():
+    try:
+        # Mengambil semua history, diurutkan dari yang terbaru
+        docs = db.collection("analysis_history").order_by("Waktu", direction=firestore.Query.DESCENDING).stream()
+        history_list = []
+        for doc in docs:
+            history_list.append(doc.to_dict())
+        return history_list
+    except Exception:
+        return []
+
+# ---  SESSION STATE UNTUK DATA MANAGEMENT ---
 if 'dataset' not in st.session_state:
     st.session_state.dataset = None
 if 'uploaded_df' not in st.session_state:
@@ -198,30 +227,38 @@ with st.sidebar:
     st.markdown("<p>Project Analisis Sentimen Ruangguru</p>", unsafe_allow_html=True)
     st.write("")
     menu = st.radio("MAIN MENU", ["Dashboard", "Data Management", "Sentiment Prediction"], label_visibility="collapsed")
-    # st.markdown("<div style='margin-top: 200px;'></div>", unsafe_allow_html=True)
-    # st.divider()
 
 
+# ==========================================
 # DASHBOARD PAGE
-
+# ==========================================
 if menu == "Dashboard":
     st.markdown("<h2 style='color:#1f2937;'>Dashboard</h2>", unsafe_allow_html=True)
     st.write("Overview Statistik Real-time")
     
-    s = st.session_state.stats
+    # Ambil metrik dari Firebase
+    s = get_firebase_stats()
+    
     c1, c2, c3, c4 = st.columns(4)
-    with c1: st.markdown(f'<div class="metric-card"><div><div class="metric-title">Total Data</div><div class="metric-value">{s["total"]}</div></div><div class="icon-box bg-blue">📊</div></div>', unsafe_allow_html=True)
-    with c2: st.markdown(f'<div class="metric-card"><div><div class="metric-title">Positif</div><div class="metric-value">{s["positif"]}</div></div><div class="icon-box bg-green">😊</div></div>', unsafe_allow_html=True)
-    with c3: st.markdown(f'<div class="metric-card"><div><div class="metric-title">Negatif</div><div class="metric-value">{s["negatif"]}</div></div><div class="icon-box bg-red">😞</div></div>', unsafe_allow_html=True)
-    with c4: st.markdown(f'<div class="metric-card"><div><div class="metric-title">Netral</div><div class="metric-value">{s["netral"]}</div></div><div class="icon-box bg-gray">😐</div></div>', unsafe_allow_html=True)
+    with c1: st.markdown(f'<div class="metric-card"><div><div class="metric-title">Total Data</div><div class="metric-value">{s.get("total", 0)}</div></div></div>', unsafe_allow_html=True)
+    with c2: st.markdown(f'<div class="metric-card"><div><div class="metric-title">Positif</div><div class="metric-value">{s.get("positif", 0)}</div></div></div>', unsafe_allow_html=True)
+    with c3: st.markdown(f'<div class="metric-card"><div><div class="metric-title">Negatif</div><div class="metric-value">{s.get("negatif", 0)}</div></div></div>', unsafe_allow_html=True)
+    with c4: st.markdown(f'<div class="metric-card"><div><div class="metric-title">Netral</div><div class="metric-value">{s.get("netral", 0)}</div></div></div>', unsafe_allow_html=True)
 
     st.subheader("Aktivitas Terbaru")
-    if st.session_state.history:
-        st.dataframe(pd.DataFrame(st.session_state.history), use_container_width=True)
+    
+    # Ambil riwayat dari Firebase
+    history_data = get_firebase_history()
+    
+    if history_data:
+        df_history = pd.DataFrame(history_data)
+        st.dataframe(df_history, use_container_width=True)
     else:
-        st.info("Belum ada aktivitas analisis.")
+        st.info("Belum ada aktivitas analisis yang tersimpan di database.")
 
-# DATA MANAGEMENT PAGE
+# ==========================================
+# DATA MANAGEMENT PAGE (Dibiarkan aslinya)
+# ==========================================
 elif menu == "Data Management":
     st.markdown("<h2 style='color:#1f2937;'>Data Management</h2>", unsafe_allow_html=True)
     st.write("Proses dataset dalam jumlah besar (CSV/Excel)")
@@ -271,10 +308,10 @@ elif menu == "Data Management":
                     texts_asli = df[text_col].astype(str).tolist()
 
                     progress_bar = st.progress(0, text="Step 1/3: Preprocessing teks...")
-                    texts_clean      = [clean_text(t)           for t in texts_asli]
-                    texts_normalized = [normalize_text(t)       for t in texts_asli]
-                    texts_stopword   = [remove_stopwords(n)     for n in texts_normalized]
-                    texts_stemmed    = [stem_text(s)            for s in texts_stopword]
+                    texts_clean      = [clean_text(t)            for t in texts_asli]
+                    texts_normalized = [normalize_text(t)        for t in texts_asli]
+                    texts_stopword   = [remove_stopwords(n)      for n in texts_normalized]
+                    texts_stemmed    = [stem_text(s)             for s in texts_stopword]
                     progress_bar.progress(0.33, text="Step 2/3: Tokenisasi & padding...")
 
                     seqs   = tokenizer_ml.texts_to_sequences(texts_normalized)
@@ -340,7 +377,9 @@ elif menu == "Data Management":
                         st.session_state.dataset = None
                         st.rerun()
 
-# SENTIMENT PREDICTION PAGE
+# ==========================================
+# SENTIMENT PREDICTION PAGE (SIMPAN KE FIREBASE)
+# ==========================================
 elif menu == "Sentiment Prediction":
     st.markdown("<h2 style='color:#1f2937;'>Sentiment Prediction</h2>", unsafe_allow_html=True)
     st.write("Analisis teks tunggal secara real-time")
@@ -352,10 +391,27 @@ elif menu == "Sentiment Prediction":
         if st.button("Analisis Sentimen Sekarang"):
             if input_text:
                 res, emo, conf, scores = get_prediction(input_text)
+                waktu_sekarang = time.strftime("%Y-%m-%d %H:%M:%S")
                 
-                st.session_state.stats["total"] += 1
-                st.session_state.stats[res.lower()] += 1
-                st.session_state.history.insert(0, {"Teks": input_text, "Hasil": res, "Waktu": time.strftime("%H:%M:%S")})
+                # 1. Simpan riwayat ke Koleksi analysis_history
+                try:
+                    doc_ref = db.collection("analysis_history").document()
+                    doc_ref.set({
+                        "Teks": input_text,
+                        "Hasil": res,
+                        "Keyakinan": f"{conf}%",
+                        "Waktu": waktu_sekarang
+                    })
+                    
+                    # 2. Update angka metrik di Koleksi global_stats
+                    stats_ref = db.collection("global_stats").document("current_stats")
+                    stats_ref.set({
+                        "total": firestore.Increment(1),
+                        res.lower(): firestore.Increment(1)
+                    }, merge=True)
+                    
+                except Exception as e:
+                    st.error(f"Gagal menyimpan ke database: {e}")
                 
                 st.divider()
                 col_res, col_conf = st.columns(2)
