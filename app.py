@@ -164,7 +164,7 @@ if 'uploaded_filename' not in st.session_state: st.session_state.uploaded_filena
 # --- SIDEBAR NAVIGATION (FIGMA MATCH) ---
 with st.sidebar:
     st.markdown('<div class="sidebar-title">Sentiment🙂</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sidebar-subtitle">Project Analisis Sentimen Ruangguru</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-subtitle">Analisis Sentimen Ruangguru</div>', unsafe_allow_html=True)
     # Menu Radio dengan CSS jarak khusus
     menu = st.radio("NAVIGATION", ["Dashboard", "Data Management", "Sentiment Prediction"])
 
