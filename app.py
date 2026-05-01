@@ -182,7 +182,7 @@ if menu == "Dashboard":
     with c3: st.markdown(f'<div class="metric-card"><div class="metric-title">Negatif 😞</div><div class="metric-value">{s["negatif"]}</div></div>', unsafe_allow_html=True)
     with c4: st.markdown(f'<div class="metric-card"><div class="metric-title">Netral 😐</div><div class="metric-value">{s["netral"]}</div></div>', unsafe_allow_html=True)
     
-    st.subheader("Aktivitas Terbaru (Top 10)")
+    st.subheader("Aktivitas Terbaru")
     hist = get_history_firebase(10)
     if hist:
         st.dataframe(pd.DataFrame(hist), use_container_width=True)
