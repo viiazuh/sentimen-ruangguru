@@ -76,7 +76,7 @@ st.markdown("""
         color: #000000 !important;
     }
 
-    /* DASHBOARD CARD */
+    /* DASHBOARD & DATA MANAGEMENT METRIC CARD */
     .metric-card { 
         background-color: white; 
         padding: 20px; 
@@ -88,10 +88,6 @@ st.markdown("""
     .metric-title { color: #6b7280; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; }
     .metric-value { color: #1f2937; font-size: 1.75rem; font-weight: 700; }
 
-    /* UI DATA MANAGEMENT (SIMPLE METRICS) */
-    .simple-metric-label { color: #6b7280; font-size: 0.9rem; font-weight: 500; margin-bottom: -5px; }
-    .simple-metric-value { color: #1f2937; font-size: 1.8rem; font-weight: 700; margin-bottom: 15px; }
-
     /* BUTTONS */
     .stButton>button { 
         background: #f97316 !important; 
@@ -102,14 +98,13 @@ st.markdown("""
         width: 100%;
     }
     
-    /* Tombol Download */
+    /* Tombol Download Khusus agar lebih kecil/rapi */
     [data-testid="stDownloadButton"] > button {
         background: #ffffff !important;
         color: #1f2937 !important;
         border: 1px solid #e5e7eb !important;
-        border-radius: 6px !important;
+        border-radius: 8px !important;
         font-weight: 500 !important;
-        padding: 0.4rem 1rem !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -249,43 +244,38 @@ elif menu == "Data Management":
 
     if st.session_state.dataset is not None:
         st.divider()
-        st.markdown("### Hasil Analisis")
+        st.subheader("Hasil Analisis")
         
-        # --- SIMPLE METRICS BAR (SESUAI GAMBAR 3d15b3 - Tanpa Card Putih) ---
+        # --- METRICS BAR (Sesuai Gambar) ---
         res_df = st.session_state.dataset
-        total_v = len(res_df)
-        pos_v = len(res_df[res_df['Sentimen'] == "Positif"])
-        neg_v = len(res_df[res_df['Sentimen'] == "Negatif"])
-        net_v = len(res_df[res_df['Sentimen'] == "Netral"])
+        total_n = len(res_df)
+        p_n = len(res_df[res_df['Sentimen'] == "Positif"])
+        neg_n = len(res_df[res_df['Sentimen'] == "Negatif"])
+        net_n = len(res_df[res_df['Sentimen'] == "Netral"])
         
         m1, m2, m3, m4 = st.columns(4)
-        with m1:
-            st.markdown(f'<p class="simple-metric-label">Total</p><p class="simple-metric-value">{total_v}</p>', unsafe_allow_html=True)
-        with m2:
-            st.markdown(f'<p class="simple-metric-label">😀 Positif</p><p class="simple-metric-value">{pos_v}</p>', unsafe_allow_html=True)
-        with m3:
-            st.markdown(f'<p class="simple-metric-label">😞 Negatif</p><p class="simple-metric-value">{neg_v}</p>', unsafe_allow_html=True)
-        with m4:
-            st.markdown(f'<p class="simple-metric-label">😐 Netral</p><p class="simple-metric-value">{net_v}</p>', unsafe_allow_html=True)
+        with m1: st.markdown(f'<div class="metric-card"><div class="metric-title">Total</div><div class="metric-value">{total_n}</div></div>', unsafe_allow_html=True)
+        with m2: st.markdown(f'<div class="metric-card"><div class="metric-title">😊 Positif</div><div class="metric-value">{p_n}</div></div>', unsafe_allow_html=True)
+        with m3: st.markdown(f'<div class="metric-card"><div class="metric-title">😞 Negatif</div><div class="metric-value">{neg_n}</div></div>', unsafe_allow_html=True)
+        with m4: st.markdown(f'<div class="metric-card"><div class="metric-title">😐 Netral</div><div class="metric-value">{net_n}</div></div>', unsafe_allow_html=True)
         
-        # --- TABEL ---
+        # --- TABEL HASIL ---
         st.dataframe(res_df, use_container_width=True)
         
-        # --- FOOTER ACTIONS (DOWNLOAD KIRI, HAPUS KANAN) ---
-        col_csv, col_excel, col_spacer, col_del = st.columns([0.8, 1, 6, 1.5])
+        # --- DOWNLOAD & DELETE ACTION BAR (Sesuai Gambar: Kiri Download, Kanan Hapus) ---
+        col_csv, col_excel, col_spacer, col_del = st.columns([1.2, 1.2, 5, 2])
         
-        with col_csv:
-            csv_data = res_df.to_csv(index=False).encode('utf-8')
-            st.download_button("⬇️ CSV", csv_data, "hasil_sentimen.csv", "text/csv")
+        csv_data = res_df.to_csv(index=False).encode('utf-8')
+        col_csv.download_button("⬇️ CSV", csv_data, "hasil_sentimen.csv", "text/csv", use_container_width=True)
         
-        with col_excel:
-            # Excel diabaikan seperti instruksi (disiapkan buffer kosong atau teks saja)
-            st.info("Excel tidak tersedia.", icon="ℹ️")
+        output_excel = io.BytesIO()
+        with pd.ExcelWriter(output_excel, engine='xlsxwriter') as writer:
+            res_df.to_excel(writer, index=False, sheet_name='Sentimen')
+        col_excel.download_button("⬇️ Excel", output_excel.getvalue(), "hasil_sentimen.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
         
-        with col_del:
-            if st.button("🗑️ Hapus Hasil"):
-                st.session_state.dataset = None
-                st.rerun()
+        if col_del.button("🗑️ Hapus Hasil"):
+            st.session_state.dataset = None
+            st.rerun()
 
 # --- PREDICTION ---
 elif menu == "Sentiment Prediction":
