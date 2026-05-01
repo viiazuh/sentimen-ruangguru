@@ -125,22 +125,18 @@ def get_history_firebase(limit=10):
         return [{"Teks": d.to_dict().get("teks"), "Hasil": d.to_dict().get("hasil"), "Waktu": d.to_dict()['waktu'].strftime("%H:%M:%S") if d.to_dict().get('waktu') else "N/A"} for d in docs]
     except: return []
 
-# --- MODEL LOADING (FIXED PATH) ---
+# --- MODEL LOADING ---
 @st.cache_resource
 def load_sentiment_model():
     try:
-        # Menentukan path absolut agar tidak error di Cloud
-        base_path = os.path.dirname(__file__)
-        model_p = os.path.join(base_path, 'models', 'model_hybrid_coc.h5')
-        tok_p = os.path.join(base_path, 'models', 'tokenizer.pkl')
-        norm_p = os.path.join(base_path, 'models', 'normalization_dicts.pkl')
-
-        model = tf.keras.models.load_model(model_p)
-        with open(tok_p, 'rb') as f: tokenizer = pickle.load(f)
-        with open(norm_p, 'rb') as f: norm_dict = pickle.load(f)
+        model = tf.keras.models.load_model('models/model_hybrid_coc.h5')
+        with open('models/tokenizer.pkl', 'rb') as f:
+            tokenizer = pickle.load(f)
+        with open('models/normalization_dicts.pkl', 'rb') as f:
+            norm_dict = pickle.load(f)
         return model, tokenizer, norm_dict
-    except Exception as e: 
-        st.error(f"Detail Error Load Model: {e}")
+    except Exception as e:
+        st.error(f"Gagal memuat model: {e}")
         return None, None, None
 
 model_ml, tokenizer_ml, norm_dict = load_sentiment_model()
