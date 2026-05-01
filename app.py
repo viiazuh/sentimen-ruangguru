@@ -3,9 +3,9 @@ import pandas as pd
 import time
 import re
 import joblib
-import tensorflow as tf
-import numpy as np
-import pickle
+import tensorflow as tf  
+import numpy as np        
+import pickle             
 import io
 import os
 import firebase_admin
@@ -25,7 +25,7 @@ if not firebase_admin._apps:
 
 db = firestore.client()
 
-# --- CUSTOM CSS (PRESISI FIGMA & INTER FONT) ---
+# --- CUSTOM CSS ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -76,7 +76,7 @@ st.markdown("""
         color: #000000 !important;
     }
 
-    /* DASHBOARD & DATA MANAGEMENT METRIC CARD */
+    /* DASHBOARD CARD */
     .metric-card { 
         background-color: white; 
         padding: 20px; 
@@ -88,23 +88,52 @@ st.markdown("""
     .metric-title { color: #6b7280; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; }
     .metric-value { color: #1f2937; font-size: 1.75rem; font-weight: 700; }
 
-    /* BUTTONS */
+    /* DATA MANAGEMENT STAT CARDS */
+    .dm-stats-row {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+    .dm-stat-card {
+        flex: 1;
+        background: #ffffff;
+        border: 1px solid #f3f4f6;
+        border-radius: 12px;
+        padding: 18px 20px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .dm-stat-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        margin-bottom: 6px;
+    }
+    .dm-stat-value {
+        font-size: 28px;
+        font-weight: 700;
+        color: #111827;
+        line-height: 1;
+    }
+    .dm-stat-emoji { font-size: 18px; margin-right: 4px; }
+
+    /* TABLE WRAP */
+    .dm-table-wrap {
+        background: #ffffff;
+        border: 1px solid #f3f4f6;
+        border-radius: 12px;
+        padding: 4px 0;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        margin-bottom: 16px;
+    }
+
     .stButton>button { 
         background: #f97316 !important; 
         color: white !important; 
         border-radius: 8px !important; 
         font-weight: 600 !important; 
         border: none !important;
-        width: 100%;
-    }
-    
-    /* Tombol Download Khusus agar lebih kecil/rapi */
-    [data-testid="stDownloadButton"] > button {
-        background: #ffffff !important;
-        color: #1f2937 !important;
-        border: 1px solid #e5e7eb !important;
-        border-radius: 8px !important;
-        font-weight: 500 !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -205,77 +234,127 @@ if menu == "Dashboard":
 # --- DATA MANAGEMENT ---
 elif menu == "Data Management":
     st.markdown("<h2>Data Management</h2>", unsafe_allow_html=True)
-    
-    uploaded_file = st.file_uploader("Upload dataset ulasan", type=["csv", "xlsx"])
-    if uploaded_file:
-        if st.session_state.uploaded_filename != uploaded_file.name:
-            st.session_state.uploaded_df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
-            st.session_state.uploaded_filename = uploaded_file.name
-            st.session_state.dataset = None
 
-    if st.session_state.uploaded_df is not None:
-        df_view = st.session_state.uploaded_df
-        st.write(f"📁 **{st.session_state.uploaded_filename}** — {len(df_view)} baris")
-        st.dataframe(df_view.head(5), use_container_width=True)
-        
-        if st.button("🔍 Jalankan Batch Analysis"):
-            with st.spinner("Menganalisis..."):
-                text_col = next((c for c in ['text', 'ulasan', 'komentar', 'textDisplay'] if c in df_view.columns), df_view.columns[0])
-                texts = df_view[text_col].astype(str).tolist()
-                prog = st.progress(0)
-                
-                normalized = [normalize_text(t) for t in texts]
-                prog.progress(0.4)
-                
-                seqs = tokenizer_ml.texts_to_sequences(normalized)
-                padded = tf.keras.preprocessing.sequence.pad_sequences(seqs, maxlen=100, padding='post')
-                preds = model_ml.predict(padded, batch_size=512, verbose=0)
-                prog.progress(1.0)
-                
-                labels = ["Netral", "Negatif", "Positif"]
-                res_list = [labels[np.argmax(p)] for p in preds]
-                conf_list = [int(np.max(p)*100) for p in preds]
-                
-                st.session_state.dataset = pd.DataFrame({
-                    "Text Asli": texts, 
-                    "Sentimen": res_list,
-                    "Keyakinan (%)": conf_list
-                })
+    # Upload area
+    with st.container(border=True):
+        uploaded_file = st.file_uploader("Upload dataset ulasan", type=["csv", "xlsx"])
+        if uploaded_file:
+            if st.session_state.uploaded_filename != uploaded_file.name:
+                st.session_state.uploaded_df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
+                st.session_state.uploaded_filename = uploaded_file.name
+                st.session_state.dataset = None
 
+        if st.session_state.uploaded_df is not None:
+            df = st.session_state.uploaded_df
+            st.write(f"📁 **{st.session_state.uploaded_filename}** — {len(df)} baris")
+            st.dataframe(df.head(5), use_container_width=True)
+
+            c1, c2 = st.columns([2, 6])
+            if c1.button("🔍 Jalankan Batch Analysis"):
+                with st.spinner("Menganalisis..."):
+                    text_col = next((c for c in ['text', 'ulasan', 'komentar', 'textDisplay'] if c in df.columns), df.columns[0])
+                    texts = df[text_col].astype(str).tolist()
+
+                    prog = st.progress(0)
+                    normalized = [normalize_text(t) for t in texts]
+                    prog.progress(0.3)
+
+                    seqs = tokenizer_ml.texts_to_sequences(normalized)
+                    padded = tf.keras.preprocessing.sequence.pad_sequences(seqs, maxlen=100, padding='post')
+                    preds = model_ml.predict(padded, batch_size=512, verbose=0)
+                    prog.progress(1.0)
+
+                    labels = ["Netral", "Negatif", "Positif"]
+                    sentimen_list  = [labels[np.argmax(p)] for p in preds]
+                    positif_scores = [round(float(p[2]) * 100, 2) for p in preds]
+                    negatif_scores = [round(float(p[1]) * 100, 2) for p in preds]
+                    netral_scores  = [round(float(p[0]) * 100, 2) for p in preds]
+                    keyakinan_list = [int(np.max(p) * 100) for p in preds]
+
+                    st.session_state.dataset = pd.DataFrame({
+                        "Text Asli"    : texts,
+                        "Sentimen"     : sentimen_list,
+                        "Positif (%)"  : positif_scores,
+                        "Negatif (%)"  : negatif_scores,
+                        "Netral (%)"   : netral_scores,
+                        "Keyakinan (%)": keyakinan_list,
+                    })
+
+            if c2.button("🗑️ Hapus"):
+                st.session_state.uploaded_df = None
+                st.session_state.dataset = None
+                st.session_state.uploaded_filename = None
+                st.rerun()
+
+    # ── Hasil Analisis ───────────────────────────────────────
     if st.session_state.dataset is not None:
-        st.divider()
-        st.subheader("Hasil Analisis")
-        
-        # --- METRICS BAR (Sesuai Gambar) ---
-        res_df = st.session_state.dataset
-        total_n = len(res_df)
-        p_n = len(res_df[res_df['Sentimen'] == "Positif"])
-        neg_n = len(res_df[res_df['Sentimen'] == "Negatif"])
-        net_n = len(res_df[res_df['Sentimen'] == "Netral"])
-        
-        m1, m2, m3, m4 = st.columns(4)
-        with m1: st.markdown(f'<div class="metric-card"><div class="metric-title">Total</div><div class="metric-value">{total_n}</div></div>', unsafe_allow_html=True)
-        with m2: st.markdown(f'<div class="metric-card"><div class="metric-title">😊 Positif</div><div class="metric-value">{p_n}</div></div>', unsafe_allow_html=True)
-        with m3: st.markdown(f'<div class="metric-card"><div class="metric-title">😞 Negatif</div><div class="metric-value">{neg_n}</div></div>', unsafe_allow_html=True)
-        with m4: st.markdown(f'<div class="metric-card"><div class="metric-title">😐 Netral</div><div class="metric-value">{net_n}</div></div>', unsafe_allow_html=True)
-        
-        # --- TABEL HASIL ---
-        st.dataframe(res_df, use_container_width=True)
-        
-        # --- DOWNLOAD & DELETE ACTION BAR (Sesuai Gambar: Kiri Download, Kanan Hapus) ---
-        col_csv, col_excel, col_spacer, col_del = st.columns([1.2, 1.2, 5, 2])
-        
-        csv_data = res_df.to_csv(index=False).encode('utf-8')
-        col_csv.download_button("📥 CSV", csv_data, "hasil_sentimen.csv", "text/csv", use_container_width=True)
-        
-        output_excel = io.BytesIO()
-        with pd.ExcelWriter(output_excel, engine='xlsxwriter') as writer:
-            res_df.to_excel(writer, index=False, sheet_name='Sentimen')
-        col_excel.download_button("📥 Excel", output_excel.getvalue(), "hasil_sentimen.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
-        
-        if col_del.button("🗑️ Hapus Hasil"):
-            st.session_state.dataset = None
-            st.rerun()
+        ds = st.session_state.dataset
+
+        # hitung stats
+        total   = len(ds)
+        positif = int((ds["Sentimen"] == "Positif").sum())
+        negatif = int((ds["Sentimen"] == "Negatif").sum())
+        netral  = int((ds["Sentimen"] == "Netral").sum())
+
+        st.markdown("<h3 style='margin-top:24px;margin-bottom:12px;'>Hasil Analisis</h3>", unsafe_allow_html=True)
+
+        # ── 4 stat cards ──
+        st.markdown(f"""
+        <div class="dm-stats-row">
+            <div class="dm-stat-card">
+                <div class="dm-stat-label">Total</div>
+                <div class="dm-stat-value">{total:,}</div>
+            </div>
+            <div class="dm-stat-card">
+                <div class="dm-stat-label"><span class="dm-stat-emoji">😊</span> Positif</div>
+                <div class="dm-stat-value">{positif:,}</div>
+            </div>
+            <div class="dm-stat-card">
+                <div class="dm-stat-label"><span class="dm-stat-emoji">😞</span> Negatif</div>
+                <div class="dm-stat-value">{negatif:,}</div>
+            </div>
+            <div class="dm-stat-card">
+                <div class="dm-stat-label"><span class="dm-stat-emoji">😐</span> Netral</div>
+                <div class="dm-stat-value">{netral:,}</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # ── tabel hasil ──
+        st.markdown('<div class="dm-table-wrap">', unsafe_allow_html=True)
+        st.dataframe(ds, use_container_width=True, height=320)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # ── footer: CSV | Excel (kiri) ── Hapus Hasil (kanan) ──
+        csv_data = ds.to_csv(index=False).encode('utf-8')
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            ds.to_excel(writer, index=False, sheet_name='Sentimen')
+        xlsx_data = output.getvalue()
+
+        col_csv, col_xl, col_spacer, col_hapus = st.columns([1, 1, 5, 1.5])
+        with col_csv:
+            st.download_button(
+                label="📄 CSV",
+                data=csv_data,
+                file_name="hasil_sentimen.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
+        with col_xl:
+            st.download_button(
+                label="📊 Excel",
+                data=xlsx_data,
+                file_name="hasil_sentimen.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True,
+            )
+        with col_hapus:
+            if st.button("🗑️ Hapus Hasil", use_container_width=True):
+                st.session_state.uploaded_df = None
+                st.session_state.dataset = None
+                st.session_state.uploaded_filename = None
+                st.rerun()
 
 # --- PREDICTION ---
 elif menu == "Sentiment Prediction":
