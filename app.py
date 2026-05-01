@@ -14,7 +14,6 @@ from firebase_admin import credentials, firestore
 st.set_page_config(page_title="Sentiment Pro", page_icon="🙂", layout="wide")
 
 # --- FIREBASE INITIALIZATION ---
-# Menggunakan Streamlit Secrets untuk keamanan (bukan file JSON eksternal)
 if not firebase_admin._apps:
     try:
         fb_credentials = dict(st.secrets["firebase"])
@@ -32,16 +31,17 @@ st.markdown("""
     html, body, [class*="css"], .stApp { font-family: 'Inter', sans-serif !important; }
     .stApp { background-color: #f7f9fc !important; color: #1f2937 !important; }
     [data-testid="stSidebar"] { background-color: white !important; border-right: 1px solid #e5e7eb !important; padding-top: 2rem; }
+    [data-testid="stSidebar"] .stMarkdown p { color: #4b5563 !important; font-size: 0.95rem; font-weight: 500; margin-bottom: -10px; }
     .metric-card { background-color: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid #f3f4f6; margin-bottom: 1rem; }
-    .metric-title { color: #6b7280 !important; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; }
+    .metric-title { color: #6b7280 !important; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.025em; }
     .metric-value { color: #1f2937 !important; font-size: 1.75rem; font-weight: 700; }
-    .stButton>button { background: #f97316 !important; color: white !important; border-radius: 8px !important; font-weight: 600 !important; width: 100%; }
+    [data-testid="stDataFrame"] { border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; }
+    .stButton>button { background: #f97316 !important; color: white !important; border: none !important; border-radius: 8px !important; padding: 0.5rem 1.5rem !important; font-weight: 600 !important; width: 100%; }
     </style>
     """, unsafe_allow_html=True)
 
 # --- HELPER FUNCTIONS FOR FIREBASE ---
 def save_to_firebase(text, result, confidence):
-    """Simpan hasil prediksi ke Firestore"""
     try:
         data = {
             "teks": text,
@@ -51,10 +51,9 @@ def save_to_firebase(text, result, confidence):
         }
         db.collection("history_sentiment").add(data)
     except Exception as e:
-        st.error(f"Gagal menyimpan ke Firebase: {e}")
+        st.error(f"Gagal simpan ke database: {e}")
 
-def get_stats_from_firebase():
-    """Ambil statistik real-time dari Firestore"""
+def get_stats_firebase():
     try:
         docs = db.collection("history_sentiment").stream()
         total, pos, neg, net = 0, 0, 0, 0
@@ -68,10 +67,9 @@ def get_stats_from_firebase():
     except:
         return {"total": 0, "positif": 0, "negatif": 0, "netral": 0}
 
-def get_history_from_firebase(limit_count=10):
-    """Ambil riwayat data terbaru"""
+def get_history_firebase(limit=10):
     try:
-        docs = db.collection("history_sentiment").order_by("waktu", direction=firestore.Query.DESCENDING).limit(limit_count).stream()
+        docs = db.collection("history_sentiment").order_by("waktu", direction=firestore.Query.DESCENDING).limit(limit).stream()
         history = []
         for doc in docs:
             d = doc.to_dict()
@@ -97,7 +95,7 @@ def load_sentiment_model():
 
 model_ml, tokenizer_ml, norm_dict = load_sentiment_model()
 
-# --- PREPROCESSING FUNCTIONS ---
+# --- PREPROCESSING & PREDICTION ---
 def normalize_text(text):
     text = str(text).lower()
     text = re.sub(r'[^\w\s]', '', text)
@@ -118,18 +116,22 @@ def get_prediction(text):
         return labels[idx], emojis[idx], int(conf)
     return "Error", "⚠️", 0
 
+# --- SESSION STATE (Original for Data Management) ---
+if 'dataset' not in st.session_state: st.session_state.dataset = None
+if 'uploaded_df' not in st.session_state: st.session_state.uploaded_df = None
+if 'uploaded_filename' not in st.session_state: st.session_state.uploaded_filename = None
+
 # --- SIDEBAR ---
 with st.sidebar:
-    st.markdown("<h2>Sentiment<span style='color:#f97316;'>🙂</span></h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='margin-bottom:0;'>Sentiment<span style='color:#f97316;'>🙂</span></h2>", unsafe_allow_html=True)
     st.markdown("<p>Project Analisis Sentimen Ruangguru</p>", unsafe_allow_html=True)
     menu = st.radio("MAIN MENU", ["Dashboard", "Data Management", "Sentiment Prediction"], label_visibility="collapsed")
 
 # --- PAGE: DASHBOARD ---
 if menu == "Dashboard":
     st.markdown("<h2>Dashboard</h2>", unsafe_allow_html=True)
-    
-    with st.spinner("Sinkronisasi data database..."):
-        s = get_stats_from_firebase()
+    with st.spinner("Sinkronisasi database..."):
+        s = get_stats_firebase()
     
     c1, c2, c3, c4 = st.columns(4)
     with c1: st.markdown(f'<div class="metric-card"><div class="metric-title">Total Data</div><div class="metric-value">{s["total"]}</div></div>', unsafe_allow_html=True)
@@ -138,59 +140,99 @@ if menu == "Dashboard":
     with c4: st.markdown(f'<div class="metric-card"><div class="metric-title">Netral 😐</div><div class="metric-value">{s["netral"]}</div></div>', unsafe_allow_html=True)
 
     st.subheader("Aktivitas Terbaru (Top 10)")
-    recent_history = get_history_from_firebase(10)
-    if recent_history:
-        st.dataframe(pd.DataFrame(recent_history), use_container_width=True)
-        
+    hist = get_history_firebase(10)
+    if hist:
+        st.dataframe(pd.DataFrame(hist), use_container_width=True)
         with st.expander("Lihat Riwayat Lengkap"):
-            full_history = get_history_from_firebase(100)
-            st.table(full_history)
+            full_hist = get_history_firebase(100)
+            st.table(full_hist)
     else:
-        st.info("Belum ada aktivitas di database.")
+        st.info("Belum ada data di database.")
 
-# --- PAGE: DATA MANAGEMENT (LOCAL BATCH) ---
+# --- PAGE: DATA MANAGEMENT (Original Functions Preserved) ---
 elif menu == "Data Management":
     st.markdown("<h2>Data Management</h2>", unsafe_allow_html=True)
-    st.info("Batch Analysis diproses secara lokal dan tidak disimpan ke Firebase.")
+    st.write("Proses dataset dalam jumlah besar (CSV/Excel) - **Lokal**")
     
-    uploaded_file = st.file_uploader("Upload dataset ulasan", type=["csv", "xlsx"])
-    if uploaded_file:
-        df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
-        st.write(f"Preview Data: {len(df)} baris")
-        st.dataframe(df.head(5), use_container_width=True)
+    with st.container(border=True):
+        uploaded_file = st.file_uploader("Upload dataset ulasan", type=["csv", "xlsx"])
         
-        if st.button("Jalankan Batch Analysis"):
-            with st.spinner("Menganalisis..."):
-                text_col = next((c for c in ['text', 'ulasan', 'komentar', 'content'] if c in df.columns), df.columns[0])
-                texts = df[text_col].astype(str).tolist()
-                
-                # Bulk prediction (tidak simpan ke firebase per baris)
-                results = []
-                for t in texts:
-                    res, emo, conf = get_prediction(t)
-                    results.append({"Teks": t, "Sentimen": res, "Skor": conf})
-                
-                st.session_state.batch_result = pd.DataFrame(results)
-                st.success("Analisis Batch Selesai!")
-                st.dataframe(st.session_state.batch_result, use_container_width=True)
+        if uploaded_file is not None:
+            if st.session_state.uploaded_filename != uploaded_file.name:
+                try:
+                    if uploaded_file.name.endswith('.csv'):
+                        df_upload = pd.read_csv(uploaded_file, on_bad_lines='skip', engine='python')
+                    else:
+                        df_upload = pd.read_excel(uploaded_file)
+                    st.session_state.uploaded_df = df_upload
+                    st.session_state.uploaded_filename = uploaded_file.name
+                    st.session_state.dataset = None
+                except Exception as e:
+                    st.error(f"Gagal membaca file: {e}")
+
+        if st.session_state.uploaded_df is not None:
+            df = st.session_state.uploaded_df
+            st.write(f"📁 File: **{st.session_state.uploaded_filename}** — {len(df)} baris data")
+            st.dataframe(df.head(10), use_container_width=True)
+            
+            col_btn1, col_btn2 = st.columns([2, 6])
+            with col_btn1:
+                run_analysis = st.button("🔍 Jalankan Batch Analysis")
+            with col_btn2:
+                if st.button("🗑️ Hapus File"):
+                    st.session_state.uploaded_df = None
+                    st.session_state.uploaded_filename = None
+                    st.session_state.dataset = None
+                    st.rerun()
+
+            if run_analysis:
+                with st.spinner("Sedang menganalisis dataset..."):
+                    text_col = next((c for c in ['textDisplay', 'text', 'ulasan', 'review', 'komentar', 'content'] if c in df.columns), df.columns[0])
+                    texts_asli = df[text_col].astype(str).tolist()
+
+                    progress_bar = st.progress(0, text="Preprocessing...")
+                    texts_normalized = [normalize_text(t) for t in texts_asli]
+                    
+                    progress_bar.progress(0.4, text="Tokenisasi...")
+                    seqs = tokenizer_ml.texts_to_sequences(texts_normalized)
+                    padded = tf.keras.preprocessing.sequence.pad_sequences(seqs, maxlen=100, padding='post')
+                    
+                    progress_bar.progress(0.7, text="Prediksi model...")
+                    all_preds = model_ml.predict(padded, batch_size=512, verbose=0)
+                    progress_bar.progress(1.0, text="Selesai!")
+
+                    labels = ["Netral", "Negatif", "Positif"]
+                    results = []
+                    for i in range(len(texts_asli)):
+                        idx = np.argmax(all_preds[i])
+                        results.append({
+                            "Text Asli": texts_asli[i],
+                            "Sentimen": labels[idx],
+                            "Keyakinan (%)": int(np.max(all_preds[i]) * 100)
+                        })
+
+                    st.session_state.dataset = pd.DataFrame(results)
+                    st.success(f"✅ Berhasil memproses {len(texts_asli)} data.")
+
+    if st.session_state.dataset is not None:
+        with st.container(border=True):
+            st.dataframe(st.session_state.dataset, use_container_width=True)
+            csv_data = st.session_state.dataset.to_csv(index=False).encode('utf-8')
+            st.download_button("⬇️ Download CSV", csv_data, "hasil_sentimen.csv", "text/csv")
 
 # --- PAGE: SENTIMENT PREDICTION ---
 elif menu == "Sentiment Prediction":
     st.markdown("<h2>Sentiment Prediction</h2>", unsafe_allow_html=True)
-    
     with st.container(border=True):
-        input_text = st.text_area("Masukkan teks ulasan", placeholder="Ketik di sini...", height=150)
-        
+        input_text = st.text_area("Masukkan teks ulasan", placeholder="Contoh: Aplikasi ini sangat membantu!", height=150)
         if st.button("Analisis Sentimen Sekarang"):
             if input_text.strip():
                 res, emo, conf = get_prediction(input_text)
-                
-                # SIMPAN KE FIREBASE
-                save_to_firebase(input_text, res, conf)
+                save_to_firebase(input_text, res, conf) # Simpan hasil ke Firebase
                 
                 st.divider()
                 st.markdown(f"### Hasil: {res} {emo}")
                 st.write(f"Tingkat Keyakinan: {conf}%")
                 st.progress(conf/100)
             else:
-                st.warning("Masukkan teks ulasan terlebih dahulu.")
+                st.warning("Silakan ketikkan ulasan terlebih dahulu.")
