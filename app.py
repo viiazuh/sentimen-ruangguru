@@ -266,12 +266,12 @@ elif menu == "Data Management":
         col_csv, col_excel, col_spacer, col_del = st.columns([1.2, 1.2, 5, 2])
         
         csv_data = res_df.to_csv(index=False).encode('utf-8')
-        col_csv.download_button("📥 CSV", csv_data, "hasil_sentimen.csv", "text/csv", use_container_width=True)
+        col_csv.download_button("⬇️ CSV", csv_data, "hasil_sentimen.csv", "text/csv", use_container_width=True)
         
         output_excel = io.BytesIO()
         with pd.ExcelWriter(output_excel, engine='xlsxwriter') as writer:
             res_df.to_excel(writer, index=False, sheet_name='Sentimen')
-        col_excel.download_button("📥 Excel", output_excel.getvalue(), "hasil_sentimen.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+        col_excel.download_button("⬇️ Excel", output_excel.getvalue(), "hasil_sentimen.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
         
         if col_del.button("🗑️ Hapus Hasil"):
             st.session_state.dataset = None
