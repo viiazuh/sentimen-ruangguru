@@ -224,7 +224,7 @@ if menu == "Dashboard":
         else: 
             st.info("Belum ada data aktivitas.")
 
-   # ==========================================
+    # ==========================================
     # BAGIAN 2: STATISTIK BATCH ANALYSIS (DATA MANAGEMENT)
     # Muncul HANYA jika pengguna sudah menjalankan batch analysis
     # ==========================================
@@ -246,20 +246,19 @@ if menu == "Dashboard":
         with b3: st.markdown(f'<div class="metric-card"><div class="metric-title">Negatif 😞</div><div class="metric-value">{batch_neg}</div></div>', unsafe_allow_html=True)
         with b4: st.markdown(f'<div class="metric-card"><div class="metric-title">Netral 😐</div><div class="metric-value">{batch_net}</div></div>', unsafe_allow_html=True)
         
-        st.markdown("<div style='font-size:16px; font-weight:600; margin-bottom:10px;'>Grafik Sentimen File Upload</div>", unsafe_allow_html=True)
-        chart_data_batch = pd.DataFrame({
-            "Sentimen": ["Positif", "Negatif", "Netral"],
-            "Jumlah Data": [batch_pos, batch_neg, batch_net]
-        }).set_index("Sentimen")
-        
         col_chart_batch, col_empty = st.columns([1.5, 1])
         with col_chart_batch:
+            st.markdown("<div style='font-size:16px; font-weight:600; margin-bottom:10px;'>Grafik Sentimen File Upload</div>", unsafe_allow_html=True)
+            chart_data_batch = pd.DataFrame({
+                "Sentimen": ["Positif", "Negatif", "Netral"],
+                "Jumlah Data": [batch_pos, batch_neg, batch_net]
+            }).set_index("Sentimen")
             st.bar_chart(chart_data_batch)
             
-        # ---> TAMBAHAN PREVIEW TABEL DI SINI <---
+        # PREVIEW TABEL DI DASHBOARD
         st.markdown("<div style='font-size:16px; font-weight:600; margin-top:20px; margin-bottom:10px;'>Preview Hasil Analisis (10 Data Pertama)</div>", unsafe_allow_html=True)
-        # Menampilkan 10 baris pertama sebagai preview
         st.dataframe(df_batch.head(10), use_container_width=True)
+
 # --- DATA MANAGEMENT ---
 elif menu == "Data Management":
     st.markdown("<h2>Data Management</h2>", unsafe_allow_html=True)
@@ -322,32 +321,29 @@ elif menu == "Data Management":
         items_per_page = 10
         total_pages = max(1, (total_n + items_per_page - 1) // items_per_page)
         
-        # Memastikan tidak out of bounds
         if st.session_state.page >= total_pages:
             st.session_state.page = total_pages - 1
             
         start_idx = st.session_state.page * items_per_page
         end_idx = start_idx + items_per_page
         
-        # Menampilkan 10 data per page
         st.dataframe(res_df.iloc[start_idx:end_idx], use_container_width=True)
         
-        # Tombol Prev dan Next
         col_prev, col_info, col_next = st.columns([1, 4, 1])
         with col_prev:
-            st.button("⬅️ Prev", 
+            st.button("Prev", 
                       on_click=lambda: st.session_state.update(page=st.session_state.page - 1), 
                       disabled=(st.session_state.page == 0), 
                       use_container_width=True)
         with col_info:
             st.markdown(f"<div style='text-align: center; margin-top: 10px; font-weight: 500;'>Halaman {st.session_state.page + 1} dari {total_pages}</div>", unsafe_allow_html=True)
         with col_next:
-            st.button("Next ➡️", 
+            st.button("Next", 
                       on_click=lambda: st.session_state.update(page=st.session_state.page + 1), 
                       disabled=(st.session_state.page >= total_pages - 1), 
                       use_container_width=True)
 
-        st.markdown("<br>", unsafe_allow_html=True) # Spacer
+        st.markdown("<br>", unsafe_allow_html=True)
         
         # --- DOWNLOAD & DELETE ACTION BAR ---
         col_csv, col_excel, col_spacer, col_del = st.columns([1.2, 1.2, 5, 2])
@@ -362,7 +358,7 @@ elif menu == "Data Management":
         
         if col_del.button("🗑️ Hapus Hasil"):
             st.session_state.dataset = None
-            st.session_state.page = 0 # Reset pagination jika data dihapus
+            st.session_state.page = 0
             st.rerun()
 
 # --- PREDICTION ---
