@@ -226,8 +226,7 @@ if menu == "Dashboard":
             st.info("Belum ada data aktivitas.")
 
     # ==========================================
-    # BAGIAN 2: STATISTIK BATCH ANALYSIS (DATA MANAGEMENT)
-    # Muncul HANYA jika pengguna sudah menjalankan batch analysis (TIDAK MASUK FIREBASE)
+    # BAGIAN 2 DATA MANAGEMENT
     # ==========================================
     if st.session_state.dataset is not None:
         st.divider()
