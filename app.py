@@ -294,14 +294,14 @@ if menu == "Dashboard":
         
         col_prev_db, col_info_db, col_next_db = st.columns([1, 4, 1])
         with col_prev_db:
-            st.button("⬅️ Prev", key="btn_prev_dash",
+            st.button("Prev", key="btn_prev_dash",
                       on_click=lambda: st.session_state.update(page_dashboard=st.session_state.page_dashboard - 1), 
                       disabled=(st.session_state.page_dashboard == 0), 
                       use_container_width=True)
         with col_info_db:
             st.markdown(f"<div style='text-align: center; margin-top: 10px; font-weight: 500;'>Halaman {st.session_state.page_dashboard + 1} dari {total_pages_db}</div>", unsafe_allow_html=True)
         with col_next_db:
-            st.button("Next ➡️", key="btn_next_dash",
+            st.button("Next", key="btn_next_dash",
                       on_click=lambda: st.session_state.update(page_dashboard=st.session_state.page_dashboard + 1), 
                       disabled=(st.session_state.page_dashboard >= total_pages_db - 1), 
                       use_container_width=True)
@@ -380,14 +380,14 @@ elif menu == "Data Management":
         
         col_prev, col_info, col_next = st.columns([1, 4, 1])
         with col_prev:
-            st.button("⬅️ Prev", key="btn_prev_dm",
+            st.button("Prev", key="btn_prev_dm",
                       on_click=lambda: st.session_state.update(page=st.session_state.page - 1), 
                       disabled=(st.session_state.page == 0), 
                       use_container_width=True)
         with col_info:
             st.markdown(f"<div style='text-align: center; margin-top: 10px; font-weight: 500;'>Halaman {st.session_state.page + 1} dari {total_pages}</div>", unsafe_allow_html=True)
         with col_next:
-            st.button("Next ➡️", key="btn_next_dm",
+            st.button("Next", key="btn_next_dm",
                       on_click=lambda: st.session_state.update(page=st.session_state.page + 1), 
                       disabled=(st.session_state.page >= total_pages - 1), 
                       use_container_width=True)
