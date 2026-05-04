@@ -10,6 +10,7 @@ import io
 import os
 import firebase_admin
 from firebase_admin import credentials, firestore
+import plotly.express as px # <-- Import baru untuk custom warna & pie chart
 
 # --- SET PAGE CONFIG ---
 st.set_page_config(page_title="Sentiment Pro", page_icon="🙂", layout="wide")
@@ -172,12 +173,20 @@ def get_prediction(text):
         return labels[idx], emojis[idx], int(np.max(prediction) * 100)
     return "Error", "⚠️", 0
 
+# --- PENGATURAN WARNA GRAFIK ---
+# Positif Biru, Negatif Merah, Netral Abu-abu
+COLOR_MAP = {
+    "Positif": "#3b82f6", 
+    "Negatif": "#ef4444", 
+    "Netral": "#9ca3af"
+}
+
 # --- SESSION STATE ---
 if 'dataset' not in st.session_state: st.session_state.dataset = None
 if 'uploaded_df' not in st.session_state: st.session_state.uploaded_df = None
 if 'uploaded_filename' not in st.session_state: st.session_state.uploaded_filename = None
-if 'page' not in st.session_state: st.session_state.page = 0 # Pagination untuk Data Management
-if 'page_dashboard' not in st.session_state: st.session_state.page_dashboard = 0 # Pagination untuk Dashboard
+if 'page' not in st.session_state: st.session_state.page = 0 
+if 'page_dashboard' not in st.session_state: st.session_state.page_dashboard = 0 
 
 # --- SIDEBAR NAVIGATION ---
 with st.sidebar:
@@ -201,32 +210,38 @@ if menu == "Dashboard":
     with c3: st.markdown(f'<div class="metric-card"><div class="metric-title">Negatif 😞</div><div class="metric-value">{s["negatif"]}</div></div>', unsafe_allow_html=True)
     with c4: st.markdown(f'<div class="metric-card"><div class="metric-title">Netral 😐</div><div class="metric-value">{s["netral"]}</div></div>', unsafe_allow_html=True)
     
-    col_chart1, col_history = st.columns([1, 1])
-    
-    with col_chart1:
-        st.markdown("<div style='font-size:16px; font-weight:600; margin-bottom:10px;'>Grafik Sentimen (Real-time)</div>", unsafe_allow_html=True)
-        if s["total"] > 0:
-            chart_data_fb = pd.DataFrame({
-                "Sentimen": ["Positif", "Negatif", "Netral"],
-                "Jumlah Data": [s["positif"], s["negatif"], s["netral"]]
-            }).set_index("Sentimen")
-            st.bar_chart(chart_data_fb)
-        else:
-            st.info("Belum ada data grafik.")
+    st.markdown("<div style='font-size:16px; font-weight:600; margin-bottom:10px; margin-top:10px;'>Grafik Sentimen (Real-time)</div>", unsafe_allow_html=True)
+    if s["total"] > 0:
+        df_rt = pd.DataFrame({
+            "Sentimen": ["Positif", "Negatif", "Netral"],
+            "Jumlah Data": [s["positif"], s["negatif"], s["netral"]]
+        })
+        
+        col_bar_rt, col_pie_rt = st.columns(2)
+        with col_bar_rt:
+            fig_bar_rt = px.bar(df_rt, x="Sentimen", y="Jumlah Data", color="Sentimen", color_discrete_map=COLOR_MAP, text_auto=True)
+            fig_bar_rt.update_layout(showlegend=False, margin=dict(l=0, r=0, t=20, b=0), xaxis_title=None, yaxis_title=None)
+            st.plotly_chart(fig_bar_rt, use_container_width=True)
             
-    with col_history:
-        st.markdown("<div style='font-size:16px; font-weight:600; margin-bottom:10px;'>Aktivitas Terbaru</div>", unsafe_allow_html=True)
-        hist = get_history_firebase(5) 
-        if hist:
-            st.dataframe(pd.DataFrame(hist), use_container_width=True)
-            with st.expander("Lihat Riwayat Lengkap"):
-                full_hist = get_history_firebase(100)
-                st.table(full_hist)
-        else: 
-            st.info("Belum ada data aktivitas.")
+        with col_pie_rt:
+            fig_pie_rt = px.pie(df_rt, names="Sentimen", values="Jumlah Data", color="Sentimen", color_discrete_map=COLOR_MAP, hole=0.3)
+            fig_pie_rt.update_layout(margin=dict(l=0, r=0, t=20, b=0))
+            st.plotly_chart(fig_pie_rt, use_container_width=True)
+    else:
+        st.info("Belum ada data grafik.")
+        
+    st.markdown("<div style='font-size:16px; font-weight:600; margin-top:20px; margin-bottom:10px;'>Aktivitas Terbaru</div>", unsafe_allow_html=True)
+    hist = get_history_firebase(5) 
+    if hist:
+        st.dataframe(pd.DataFrame(hist), use_container_width=True)
+        with st.expander("Lihat Riwayat Lengkap"):
+            full_hist = get_history_firebase(100)
+            st.table(full_hist)
+    else: 
+        st.info("Belum ada data aktivitas.")
 
     # ==========================================
-    # BAGIAN 2 DATA MANAGEMENT
+    # BAGIAN 2: STATISTIK BATCH ANALYSIS (DATA MANAGEMENT)
     # ==========================================
     if st.session_state.dataset is not None:
         st.divider()
@@ -246,14 +261,22 @@ if menu == "Dashboard":
         with b3: st.markdown(f'<div class="metric-card"><div class="metric-title">Negatif 😞</div><div class="metric-value">{batch_neg}</div></div>', unsafe_allow_html=True)
         with b4: st.markdown(f'<div class="metric-card"><div class="metric-title">Netral 😐</div><div class="metric-value">{batch_net}</div></div>', unsafe_allow_html=True)
         
-        col_chart_batch, col_empty = st.columns([1.5, 1])
-        with col_chart_batch:
-            st.markdown("<div style='font-size:16px; font-weight:600; margin-bottom:10px;'>Grafik Sentimen File Upload</div>", unsafe_allow_html=True)
-            chart_data_batch = pd.DataFrame({
-                "Sentimen": ["Positif", "Negatif", "Netral"],
-                "Jumlah Data": [batch_pos, batch_neg, batch_net]
-            }).set_index("Sentimen")
-            st.bar_chart(chart_data_batch)
+        st.markdown("<div style='font-size:16px; font-weight:600; margin-bottom:10px; margin-top:10px;'>Grafik Sentimen File Upload</div>", unsafe_allow_html=True)
+        df_batch_chart = pd.DataFrame({
+            "Sentimen": ["Positif", "Negatif", "Netral"],
+            "Jumlah Data": [batch_pos, batch_neg, batch_net]
+        })
+        
+        col_bar_batch, col_pie_batch = st.columns(2)
+        with col_bar_batch:
+            fig_bar_batch = px.bar(df_batch_chart, x="Sentimen", y="Jumlah Data", color="Sentimen", color_discrete_map=COLOR_MAP, text_auto=True)
+            fig_bar_batch.update_layout(showlegend=False, margin=dict(l=0, r=0, t=20, b=0), xaxis_title=None, yaxis_title=None)
+            st.plotly_chart(fig_bar_batch, use_container_width=True)
+            
+        with col_pie_batch:
+            fig_pie_batch = px.pie(df_batch_chart, names="Sentimen", values="Jumlah Data", color="Sentimen", color_discrete_map=COLOR_MAP, hole=0.3)
+            fig_pie_batch.update_layout(margin=dict(l=0, r=0, t=20, b=0))
+            st.plotly_chart(fig_pie_batch, use_container_width=True)
             
         # --- TABEL PREVIEW & PAGINATION DI DASHBOARD ---
         st.markdown("<div style='font-size:16px; font-weight:600; margin-top:20px; margin-bottom:10px;'>Preview Hasil Analisis</div>", unsafe_allow_html=True)
@@ -271,14 +294,14 @@ if menu == "Dashboard":
         
         col_prev_db, col_info_db, col_next_db = st.columns([1, 4, 1])
         with col_prev_db:
-            st.button("Prev", key="btn_prev_dash",
+            st.button("⬅️ Prev", key="btn_prev_dash",
                       on_click=lambda: st.session_state.update(page_dashboard=st.session_state.page_dashboard - 1), 
                       disabled=(st.session_state.page_dashboard == 0), 
                       use_container_width=True)
         with col_info_db:
             st.markdown(f"<div style='text-align: center; margin-top: 10px; font-weight: 500;'>Halaman {st.session_state.page_dashboard + 1} dari {total_pages_db}</div>", unsafe_allow_html=True)
         with col_next_db:
-            st.button("Next", key="btn_next_dash",
+            st.button("Next ➡️", key="btn_next_dash",
                       on_click=lambda: st.session_state.update(page_dashboard=st.session_state.page_dashboard + 1), 
                       disabled=(st.session_state.page_dashboard >= total_pages_db - 1), 
                       use_container_width=True)
@@ -357,14 +380,14 @@ elif menu == "Data Management":
         
         col_prev, col_info, col_next = st.columns([1, 4, 1])
         with col_prev:
-            st.button("Prev", key="btn_prev_dm",
+            st.button("⬅️ Prev", key="btn_prev_dm",
                       on_click=lambda: st.session_state.update(page=st.session_state.page - 1), 
                       disabled=(st.session_state.page == 0), 
                       use_container_width=True)
         with col_info:
             st.markdown(f"<div style='text-align: center; margin-top: 10px; font-weight: 500;'>Halaman {st.session_state.page + 1} dari {total_pages}</div>", unsafe_allow_html=True)
         with col_next:
-            st.button("Next", key="btn_next_dm",
+            st.button("Next ➡️", key="btn_next_dm",
                       on_click=lambda: st.session_state.update(page=st.session_state.page + 1), 
                       disabled=(st.session_state.page >= total_pages - 1), 
                       use_container_width=True)
