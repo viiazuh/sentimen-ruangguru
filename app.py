@@ -227,7 +227,7 @@ if menu == "Dashboard":
 
     # ==========================================
     # BAGIAN 2: STATISTIK BATCH ANALYSIS (DATA MANAGEMENT)
-    # Muncul HANYA jika pengguna sudah menjalankan batch analysis (TIDAK MASUK FIREBASE)
+    # Muncul HANYA jika pengguna sudah menjalankan batch analysis
     # ==========================================
     if st.session_state.dataset is not None:
         st.divider()
@@ -270,7 +270,6 @@ if menu == "Dashboard":
         
         st.dataframe(df_batch.iloc[start_idx_db:end_idx_db], use_container_width=True)
         
-        # Tombol Pagination khusus Dashboard
         col_prev_db, col_info_db, col_next_db = st.columns([1, 4, 1])
         with col_prev_db:
             st.button("⬅️ Prev", key="btn_prev_dash",
@@ -296,7 +295,7 @@ elif menu == "Data Management":
             st.session_state.uploaded_filename = uploaded_file.name
             st.session_state.dataset = None
             st.session_state.page = 0 
-            st.session_state.page_dashboard = 0 # Reset pagination dashboard juga
+            st.session_state.page_dashboard = 0
 
     if st.session_state.uploaded_df is not None:
         df_view = st.session_state.uploaded_df
@@ -327,7 +326,7 @@ elif menu == "Data Management":
                     "Keyakinan (%)": conf_list
                 })
                 st.session_state.page = 0 
-                st.session_state.page_dashboard = 0 # Reset pagination
+                st.session_state.page_dashboard = 0
 
     if st.session_state.dataset is not None:
         st.divider()
@@ -373,8 +372,8 @@ elif menu == "Data Management":
 
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # --- DOWNLOAD & DELETE ACTION BAR ---
-        col_csv, col_excel, col_spacer, col_del = st.columns([1.2, 1.2, 5, 2])
+        # --- ACTION BAR (DOWNLOAD, SIMPAN DB, HAPUS) ---
+        col_csv, col_excel, col_save, col_del = st.columns([1.2, 1.2, 2.5, 1.5])
         
         csv_data = res_df.to_csv(index=False).encode('utf-8')
         col_csv.download_button("⬇️ CSV", csv_data, "hasil_sentimen.csv", "text/csv", use_container_width=True)
@@ -384,6 +383,22 @@ elif menu == "Data Management":
             res_df.to_excel(writer, index=False, sheet_name='Sentimen')
         col_excel.download_button("⬇️ Excel", output_excel.getvalue(), "hasil_sentimen.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
         
+        if col_save.button("💾 Simpan ke Database"):
+            st.info("Sedang menyimpan data ke Firebase, mohon jangan tutup halaman ini...")
+            prog_save = st.progress(0)
+            
+            for i, row in res_df.iterrows():
+                save_to_firebase(row["Text Asli"], row["Sentimen"], row["Keyakinan (%)"])
+                prog_save.progress((i + 1) / total_n)
+            
+            st.success(f"Mantap! {total_n} data berhasil disimpan permanen ke Firebase!")
+            time.sleep(2)
+            
+            st.session_state.dataset = None
+            st.session_state.page = 0
+            st.session_state.page_dashboard = 0
+            st.rerun()
+
         if col_del.button("🗑️ Hapus Hasil"):
             st.session_state.dataset = None
             st.session_state.page = 0
