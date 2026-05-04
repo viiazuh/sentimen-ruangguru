@@ -176,6 +176,7 @@ def get_prediction(text):
 if 'dataset' not in st.session_state: st.session_state.dataset = None
 if 'uploaded_df' not in st.session_state: st.session_state.uploaded_df = None
 if 'uploaded_filename' not in st.session_state: st.session_state.uploaded_filename = None
+if 'page' not in st.session_state: st.session_state.page = 0 # State untuk Pagination
 
 # --- SIDEBAR NAVIGATION ---
 with st.sidebar:
@@ -186,21 +187,55 @@ with st.sidebar:
 # --- DASHBOARD ---
 if menu == "Dashboard":
     st.markdown("<h2>Dashboard</h2>", unsafe_allow_html=True)
-    s = get_stats_firebase()
-    c1, c2, c3, c4 = st.columns(4)
-    with c1: st.markdown(f'<div class="metric-card"><div class="metric-title">Total Data</div><div class="metric-value">{s["total"]}</div></div>', unsafe_allow_html=True)
-    with c2: st.markdown(f'<div class="metric-card"><div class="metric-title">Positif 😊</div><div class="metric-value">{s["positif"]}</div></div>', unsafe_allow_html=True)
-    with c3: st.markdown(f'<div class="metric-card"><div class="metric-title">Negatif 😞</div><div class="metric-value">{s["negatif"]}</div></div>', unsafe_allow_html=True)
-    with c4: st.markdown(f'<div class="metric-card"><div class="metric-title">Netral 😐</div><div class="metric-value">{s["netral"]}</div></div>', unsafe_allow_html=True)
     
-    st.subheader("Aktivitas Terbaru")
-    hist = get_history_firebase(10)
-    if hist:
-        st.dataframe(pd.DataFrame(hist), use_container_width=True)
-        with st.expander("Lihat Riwayat Lengkap"):
-            full_hist = get_history_firebase(100)
-            st.table(full_hist)
-    else: st.info("Belum ada data.")
+    # 1. Mengambil data dari Firebase
+    s = get_stats_firebase()
+    
+    # 2. Menambahkan dengan data dari Data Management (jika ada)
+    batch_total, batch_pos, batch_neg, batch_net = 0, 0, 0, 0
+    if st.session_state.dataset is not None:
+        df_batch = st.session_state.dataset
+        batch_total = len(df_batch)
+        batch_pos = len(df_batch[df_batch['Sentimen'] == "Positif"])
+        batch_neg = len(df_batch[df_batch['Sentimen'] == "Negatif"])
+        batch_net = len(df_batch[df_batch['Sentimen'] == "Netral"])
+        
+    t_total = s["total"] + batch_total
+    t_pos = s["positif"] + batch_pos
+    t_neg = s["negatif"] + batch_neg
+    t_net = s["netral"] + batch_net
+
+    c1, c2, c3, c4 = st.columns(4)
+    with c1: st.markdown(f'<div class="metric-card"><div class="metric-title">Total Data</div><div class="metric-value">{t_total}</div></div>', unsafe_allow_html=True)
+    with c2: st.markdown(f'<div class="metric-card"><div class="metric-title">Positif 😊</div><div class="metric-value">{t_pos}</div></div>', unsafe_allow_html=True)
+    with c3: st.markdown(f'<div class="metric-card"><div class="metric-title">Negatif 😞</div><div class="metric-value">{t_neg}</div></div>', unsafe_allow_html=True)
+    with c4: st.markdown(f'<div class="metric-card"><div class="metric-title">Netral 😐</div><div class="metric-value">{t_net}</div></div>', unsafe_allow_html=True)
+    
+    st.divider()
+    
+    col_chart, col_history = st.columns([1, 1])
+    
+    # 3. Menambahkan Grafik Sentimen
+    with col_chart:
+        st.subheader("Distribusi Sentimen")
+        if t_total > 0:
+            chart_data = pd.DataFrame({
+                "Sentimen": ["Positif", "Negatif", "Netral"],
+                "Jumlah Data": [t_pos, t_neg, t_net]
+            }).set_index("Sentimen")
+            st.bar_chart(chart_data)
+        else:
+            st.info("Belum ada data untuk ditampilkan pada grafik.")
+            
+    with col_history:
+        st.subheader("Aktivitas Prediksi Terbaru")
+        hist = get_history_firebase(5) # Dibatasi 5 agar rapi bersandingan dengan chart
+        if hist:
+            st.dataframe(pd.DataFrame(hist), use_container_width=True)
+            with st.expander("Lihat Riwayat Lengkap"):
+                full_hist = get_history_firebase(100)
+                st.table(full_hist)
+        else: st.info("Belum ada data aktivitas.")
 
 # --- DATA MANAGEMENT ---
 elif menu == "Data Management":
@@ -212,6 +247,7 @@ elif menu == "Data Management":
             st.session_state.uploaded_df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
             st.session_state.uploaded_filename = uploaded_file.name
             st.session_state.dataset = None
+            st.session_state.page = 0 # Reset page saat upload file baru
 
     if st.session_state.uploaded_df is not None:
         df_view = st.session_state.uploaded_df
@@ -241,12 +277,12 @@ elif menu == "Data Management":
                     "Sentimen": res_list,
                     "Keyakinan (%)": conf_list
                 })
+                st.session_state.page = 0 # Reset ke halaman pertama saat analisis selesai
 
     if st.session_state.dataset is not None:
         st.divider()
         st.subheader("Hasil Analisis")
         
-        # --- METRICS BAR (Sesuai Gambar) ---
         res_df = st.session_state.dataset
         total_n = len(res_df)
         p_n = len(res_df[res_df['Sentimen'] == "Positif"])
@@ -259,10 +295,38 @@ elif menu == "Data Management":
         with m3: st.markdown(f'<div class="metric-card"><div class="metric-title">😞 Negatif</div><div class="metric-value">{neg_n}</div></div>', unsafe_allow_html=True)
         with m4: st.markdown(f'<div class="metric-card"><div class="metric-title">😐 Netral</div><div class="metric-value">{net_n}</div></div>', unsafe_allow_html=True)
         
-        # --- TABEL HASIL ---
-        st.dataframe(res_df, use_container_width=True)
+        # --- TABEL HASIL & PAGINATION ---
+        items_per_page = 10
+        total_pages = max(1, (total_n + items_per_page - 1) // items_per_page)
         
-        # --- DOWNLOAD & DELETE ACTION BAR (Sesuai Gambar: Kiri Download, Kanan Hapus) ---
+        # Memastikan tidak out of bounds
+        if st.session_state.page >= total_pages:
+            st.session_state.page = total_pages - 1
+            
+        start_idx = st.session_state.page * items_per_page
+        end_idx = start_idx + items_per_page
+        
+        # Menampilkan 10 data per page
+        st.dataframe(res_df.iloc[start_idx:end_idx], use_container_width=True)
+        
+        # Tombol Prev dan Next
+        col_prev, col_info, col_next = st.columns([1, 4, 1])
+        with col_prev:
+            st.button("⬅️ Prev", 
+                      on_click=lambda: st.session_state.update(page=st.session_state.page - 1), 
+                      disabled=(st.session_state.page == 0), 
+                      use_container_width=True)
+        with col_info:
+            st.markdown(f"<div style='text-align: center; margin-top: 10px; font-weight: 500;'>Halaman {st.session_state.page + 1} dari {total_pages}</div>", unsafe_allow_html=True)
+        with col_next:
+            st.button("Next ➡️", 
+                      on_click=lambda: st.session_state.update(page=st.session_state.page + 1), 
+                      disabled=(st.session_state.page >= total_pages - 1), 
+                      use_container_width=True)
+
+        st.markdown("<br>", unsafe_allow_html=True) # Spacer
+        
+        # --- DOWNLOAD & DELETE ACTION BAR ---
         col_csv, col_excel, col_spacer, col_del = st.columns([1.2, 1.2, 5, 2])
         
         csv_data = res_df.to_csv(index=False).encode('utf-8')
@@ -275,6 +339,7 @@ elif menu == "Data Management":
         
         if col_del.button("🗑️ Hapus Hasil"):
             st.session_state.dataset = None
+            st.session_state.page = 0 # Reset pagination jika data dihapus
             st.rerun()
 
 # --- PREDICTION ---
