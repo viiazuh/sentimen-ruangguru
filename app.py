@@ -114,7 +114,7 @@ st.markdown("""
 def save_to_firebase(text, result, confidence):
     try:
         db.collection("history_sentiment").add({
-            "teks": text, "hasil": result, "probabilitas": confidence, "waktu": firestore.SERVER_TIMESTAMP
+            "teks": text, "hasil": result, "Probabilitas": confidence, "waktu": firestore.SERVER_TIMESTAMP
         })
     except: pass
 
@@ -345,7 +345,7 @@ elif menu == "Data Management":
                 st.session_state.dataset = pd.DataFrame({
                     "Text Asli": texts, 
                     "Sentimen": res_list,
-                    "probabilitas(%)": conf_list
+                    "Probabilitas(%)": conf_list
                 })
                 st.session_state.page = 0 
                 st.session_state.page_dashboard = 0
@@ -422,5 +422,5 @@ elif menu == "Sentiment Prediction":
                 save_to_firebase(input_text, res, conf)
                 st.divider()
                 st.markdown(f"### Hasil: {res} {emo}")
-                st.write(f"probabilitas: {conf}%")
+                st.write(f"Probabilitas: {conf}%")
                 st.progress(conf/100)
