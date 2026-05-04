@@ -188,54 +188,74 @@ with st.sidebar:
 if menu == "Dashboard":
     st.markdown("<h2>Dashboard</h2>", unsafe_allow_html=True)
     
-    # 1. Mengambil data dari Firebase
+    # ==========================================
+    # BAGIAN 1: STATISTIK PREDIKSI SATUAN (FIREBASE)
+    # ==========================================
+    st.markdown("<h4>📊 Statistik Prediksi Satuan (Real-time)</h4>", unsafe_allow_html=True)
     s = get_stats_firebase()
     
-    # 2. Menambahkan dengan data dari Data Management (jika ada)
-    batch_total, batch_pos, batch_neg, batch_net = 0, 0, 0, 0
+    c1, c2, c3, c4 = st.columns(4)
+    with c1: st.markdown(f'<div class="metric-card"><div class="metric-title">Total Data</div><div class="metric-value">{s["total"]}</div></div>', unsafe_allow_html=True)
+    with c2: st.markdown(f'<div class="metric-card"><div class="metric-title">Positif 😊</div><div class="metric-value">{s["positif"]}</div></div>', unsafe_allow_html=True)
+    with c3: st.markdown(f'<div class="metric-card"><div class="metric-title">Negatif 😞</div><div class="metric-value">{s["negatif"]}</div></div>', unsafe_allow_html=True)
+    with c4: st.markdown(f'<div class="metric-card"><div class="metric-title">Netral 😐</div><div class="metric-value">{s["netral"]}</div></div>', unsafe_allow_html=True)
+    
+    col_chart1, col_history = st.columns([1, 1])
+    
+    with col_chart1:
+        st.markdown("<div style='font-size:16px; font-weight:600; margin-bottom:10px;'>Grafik Sentimen (Real-time)</div>", unsafe_allow_html=True)
+        if s["total"] > 0:
+            chart_data_fb = pd.DataFrame({
+                "Sentimen": ["Positif", "Negatif", "Netral"],
+                "Jumlah Data": [s["positif"], s["negatif"], s["netral"]]
+            }).set_index("Sentimen")
+            st.bar_chart(chart_data_fb)
+        else:
+            st.info("Belum ada data grafik.")
+            
+    with col_history:
+        st.markdown("<div style='font-size:16px; font-weight:600; margin-bottom:10px;'>Aktivitas Terbaru</div>", unsafe_allow_html=True)
+        hist = get_history_firebase(5) # Batasi 5 agar sejajar dengan grafik
+        if hist:
+            st.dataframe(pd.DataFrame(hist), use_container_width=True)
+            with st.expander("Lihat Riwayat Lengkap"):
+                full_hist = get_history_firebase(100)
+                st.table(full_hist)
+        else: 
+            st.info("Belum ada data aktivitas.")
+
+    # ==========================================
+    # BAGIAN 2: STATISTIK BATCH ANALYSIS (DATA MANAGEMENT)
+    # Muncul HANYA jika pengguna sudah menjalankan batch analysis
+    # ==========================================
     if st.session_state.dataset is not None:
+        st.divider() # Garis pembatas
+        
+        filename = st.session_state.uploaded_filename
+        st.markdown(f"<h4>📁 Statistik Batch Analysis (File: {filename})</h4>", unsafe_allow_html=True)
+        
         df_batch = st.session_state.dataset
         batch_total = len(df_batch)
         batch_pos = len(df_batch[df_batch['Sentimen'] == "Positif"])
         batch_neg = len(df_batch[df_batch['Sentimen'] == "Negatif"])
         batch_net = len(df_batch[df_batch['Sentimen'] == "Netral"])
         
-    t_total = s["total"] + batch_total
-    t_pos = s["positif"] + batch_pos
-    t_neg = s["negatif"] + batch_neg
-    t_net = s["netral"] + batch_net
-
-    c1, c2, c3, c4 = st.columns(4)
-    with c1: st.markdown(f'<div class="metric-card"><div class="metric-title">Total Data</div><div class="metric-value">{t_total}</div></div>', unsafe_allow_html=True)
-    with c2: st.markdown(f'<div class="metric-card"><div class="metric-title">Positif 😊</div><div class="metric-value">{t_pos}</div></div>', unsafe_allow_html=True)
-    with c3: st.markdown(f'<div class="metric-card"><div class="metric-title">Negatif 😞</div><div class="metric-value">{t_neg}</div></div>', unsafe_allow_html=True)
-    with c4: st.markdown(f'<div class="metric-card"><div class="metric-title">Netral 😐</div><div class="metric-value">{t_net}</div></div>', unsafe_allow_html=True)
-    
-    st.divider()
-    
-    col_chart, col_history = st.columns([1, 1])
-    
-    # 3. Menambahkan Grafik Sentimen
-    with col_chart:
-        st.subheader("Distribusi Sentimen")
-        if t_total > 0:
-            chart_data = pd.DataFrame({
-                "Sentimen": ["Positif", "Negatif", "Netral"],
-                "Jumlah Data": [t_pos, t_neg, t_net]
-            }).set_index("Sentimen")
-            st.bar_chart(chart_data)
-        else:
-            st.info("Belum ada data untuk ditampilkan pada grafik.")
-            
-    with col_history:
-        st.subheader("Aktivitas Prediksi Terbaru")
-        hist = get_history_firebase(5) # Dibatasi 5 agar rapi bersandingan dengan chart
-        if hist:
-            st.dataframe(pd.DataFrame(hist), use_container_width=True)
-            with st.expander("Lihat Riwayat Lengkap"):
-                full_hist = get_history_firebase(100)
-                st.table(full_hist)
-        else: st.info("Belum ada data aktivitas.")
+        b1, b2, b3, b4 = st.columns(4)
+        with b1: st.markdown(f'<div class="metric-card"><div class="metric-title">Total Batch</div><div class="metric-value">{batch_total}</div></div>', unsafe_allow_html=True)
+        with b2: st.markdown(f'<div class="metric-card"><div class="metric-title">Positif 😊</div><div class="metric-value">{batch_pos}</div></div>', unsafe_allow_html=True)
+        with b3: st.markdown(f'<div class="metric-card"><div class="metric-title">Negatif 😞</div><div class="metric-value">{batch_neg}</div></div>', unsafe_allow_html=True)
+        with b4: st.markdown(f'<div class="metric-card"><div class="metric-title">Netral 😐</div><div class="metric-value">{batch_net}</div></div>', unsafe_allow_html=True)
+        
+        st.markdown("<div style='font-size:16px; font-weight:600; margin-bottom:10px;'>Grafik Sentimen File Upload</div>", unsafe_allow_html=True)
+        chart_data_batch = pd.DataFrame({
+            "Sentimen": ["Positif", "Negatif", "Netral"],
+            "Jumlah Data": [batch_pos, batch_neg, batch_net]
+        }).set_index("Sentimen")
+        
+        # Buat kolom agar grafik tidak terlalu lebar
+        col_chart_batch, col_empty = st.columns([1.5, 1])
+        with col_chart_batch:
+            st.bar_chart(chart_data_batch)
 
 # --- DATA MANAGEMENT ---
 elif menu == "Data Management":
