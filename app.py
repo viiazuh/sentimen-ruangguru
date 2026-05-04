@@ -176,7 +176,8 @@ def get_prediction(text):
 if 'dataset' not in st.session_state: st.session_state.dataset = None
 if 'uploaded_df' not in st.session_state: st.session_state.uploaded_df = None
 if 'uploaded_filename' not in st.session_state: st.session_state.uploaded_filename = None
-if 'page' not in st.session_state: st.session_state.page = 0 # State untuk Pagination
+if 'page' not in st.session_state: st.session_state.page = 0 # Pagination untuk Data Management
+if 'page_dashboard' not in st.session_state: st.session_state.page_dashboard = 0 # Pagination untuk Dashboard
 
 # --- SIDEBAR NAVIGATION ---
 with st.sidebar:
@@ -215,7 +216,7 @@ if menu == "Dashboard":
             
     with col_history:
         st.markdown("<div style='font-size:16px; font-weight:600; margin-bottom:10px;'>Aktivitas Terbaru</div>", unsafe_allow_html=True)
-        hist = get_history_firebase(5) # Batasi 5 agar sejajar dengan grafik
+        hist = get_history_firebase(5) 
         if hist:
             st.dataframe(pd.DataFrame(hist), use_container_width=True)
             with st.expander("Lihat Riwayat Lengkap"):
@@ -226,10 +227,10 @@ if menu == "Dashboard":
 
     # ==========================================
     # BAGIAN 2: STATISTIK BATCH ANALYSIS (DATA MANAGEMENT)
-    # Muncul HANYA jika pengguna sudah menjalankan batch analysis
+    # Muncul HANYA jika pengguna sudah menjalankan batch analysis (TIDAK MASUK FIREBASE)
     # ==========================================
     if st.session_state.dataset is not None:
-        st.divider() # Garis pembatas
+        st.divider()
         
         filename = st.session_state.uploaded_filename
         st.markdown(f"<h4>📁 Statistik Batch Analysis (File: {filename})</h4>", unsafe_allow_html=True)
@@ -255,9 +256,34 @@ if menu == "Dashboard":
             }).set_index("Sentimen")
             st.bar_chart(chart_data_batch)
             
-        # PREVIEW TABEL DI DASHBOARD
-        st.markdown("<div style='font-size:16px; font-weight:600; margin-top:20px; margin-bottom:10px;'>Preview Hasil Analisis (10 Data Pertama)</div>", unsafe_allow_html=True)
-        st.dataframe(df_batch.head(10), use_container_width=True)
+        # --- TABEL PREVIEW & PAGINATION DI DASHBOARD ---
+        st.markdown("<div style='font-size:16px; font-weight:600; margin-top:20px; margin-bottom:10px;'>Preview Hasil Analisis</div>", unsafe_allow_html=True)
+        
+        items_per_page_db = 10
+        total_pages_db = max(1, (batch_total + items_per_page_db - 1) // items_per_page_db)
+        
+        if st.session_state.page_dashboard >= total_pages_db:
+            st.session_state.page_dashboard = total_pages_db - 1
+            
+        start_idx_db = st.session_state.page_dashboard * items_per_page_db
+        end_idx_db = start_idx_db + items_per_page_db
+        
+        st.dataframe(df_batch.iloc[start_idx_db:end_idx_db], use_container_width=True)
+        
+        # Tombol Pagination khusus Dashboard
+        col_prev_db, col_info_db, col_next_db = st.columns([1, 4, 1])
+        with col_prev_db:
+            st.button("⬅️ Prev", key="btn_prev_dash",
+                      on_click=lambda: st.session_state.update(page_dashboard=st.session_state.page_dashboard - 1), 
+                      disabled=(st.session_state.page_dashboard == 0), 
+                      use_container_width=True)
+        with col_info_db:
+            st.markdown(f"<div style='text-align: center; margin-top: 10px; font-weight: 500;'>Halaman {st.session_state.page_dashboard + 1} dari {total_pages_db}</div>", unsafe_allow_html=True)
+        with col_next_db:
+            st.button("Next ➡️", key="btn_next_dash",
+                      on_click=lambda: st.session_state.update(page_dashboard=st.session_state.page_dashboard + 1), 
+                      disabled=(st.session_state.page_dashboard >= total_pages_db - 1), 
+                      use_container_width=True)
 
 # --- DATA MANAGEMENT ---
 elif menu == "Data Management":
@@ -269,7 +295,8 @@ elif menu == "Data Management":
             st.session_state.uploaded_df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
             st.session_state.uploaded_filename = uploaded_file.name
             st.session_state.dataset = None
-            st.session_state.page = 0 # Reset page saat upload file baru
+            st.session_state.page = 0 
+            st.session_state.page_dashboard = 0 # Reset pagination dashboard juga
 
     if st.session_state.uploaded_df is not None:
         df_view = st.session_state.uploaded_df
@@ -299,7 +326,8 @@ elif menu == "Data Management":
                     "Sentimen": res_list,
                     "Keyakinan (%)": conf_list
                 })
-                st.session_state.page = 0 # Reset ke halaman pertama saat analisis selesai
+                st.session_state.page = 0 
+                st.session_state.page_dashboard = 0 # Reset pagination
 
     if st.session_state.dataset is not None:
         st.divider()
@@ -317,7 +345,7 @@ elif menu == "Data Management":
         with m3: st.markdown(f'<div class="metric-card"><div class="metric-title">😞 Negatif</div><div class="metric-value">{neg_n}</div></div>', unsafe_allow_html=True)
         with m4: st.markdown(f'<div class="metric-card"><div class="metric-title">😐 Netral</div><div class="metric-value">{net_n}</div></div>', unsafe_allow_html=True)
         
-        # --- TABEL HASIL & PAGINATION ---
+        # --- TABEL HASIL & PAGINATION DI DATA MANAGEMENT ---
         items_per_page = 10
         total_pages = max(1, (total_n + items_per_page - 1) // items_per_page)
         
@@ -331,14 +359,14 @@ elif menu == "Data Management":
         
         col_prev, col_info, col_next = st.columns([1, 4, 1])
         with col_prev:
-            st.button("Prev", 
+            st.button("⬅️ Prev", key="btn_prev_dm",
                       on_click=lambda: st.session_state.update(page=st.session_state.page - 1), 
                       disabled=(st.session_state.page == 0), 
                       use_container_width=True)
         with col_info:
             st.markdown(f"<div style='text-align: center; margin-top: 10px; font-weight: 500;'>Halaman {st.session_state.page + 1} dari {total_pages}</div>", unsafe_allow_html=True)
         with col_next:
-            st.button("Next", 
+            st.button("Next ➡️", key="btn_next_dm",
                       on_click=lambda: st.session_state.update(page=st.session_state.page + 1), 
                       disabled=(st.session_state.page >= total_pages - 1), 
                       use_container_width=True)
@@ -359,6 +387,7 @@ elif menu == "Data Management":
         if col_del.button("🗑️ Hapus Hasil"):
             st.session_state.dataset = None
             st.session_state.page = 0
+            st.session_state.page_dashboard = 0
             st.rerun()
 
 # --- PREDICTION ---
