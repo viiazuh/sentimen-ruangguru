@@ -224,7 +224,7 @@ if menu == "Dashboard":
         else: 
             st.info("Belum ada data aktivitas.")
 
-    # ==========================================
+   # ==========================================
     # BAGIAN 2: STATISTIK BATCH ANALYSIS (DATA MANAGEMENT)
     # Muncul HANYA jika pengguna sudah menjalankan batch analysis
     # ==========================================
@@ -252,11 +252,14 @@ if menu == "Dashboard":
             "Jumlah Data": [batch_pos, batch_neg, batch_net]
         }).set_index("Sentimen")
         
-        # Buat kolom agar grafik tidak terlalu lebar
         col_chart_batch, col_empty = st.columns([1.5, 1])
         with col_chart_batch:
             st.bar_chart(chart_data_batch)
-
+            
+        # ---> TAMBAHAN PREVIEW TABEL DI SINI <---
+        st.markdown("<div style='font-size:16px; font-weight:600; margin-top:20px; margin-bottom:10px;'>Preview Hasil Analisis (10 Data Pertama)</div>", unsafe_allow_html=True)
+        # Menampilkan 10 baris pertama sebagai preview
+        st.dataframe(df_batch.head(10), use_container_width=True)
 # --- DATA MANAGEMENT ---
 elif menu == "Data Management":
     st.markdown("<h2>Data Management</h2>", unsafe_allow_html=True)
