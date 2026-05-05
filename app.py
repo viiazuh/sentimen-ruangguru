@@ -416,7 +416,7 @@ elif menu == "Sentiment Prediction":
     st.markdown("<h2>Sentiment Prediction</h2>", unsafe_allow_html=True)
     with st.container(border=True):
         input_text = st.text_area("Masukkan teks ulasan", placeholder="Contoh: Keren banget!", height=150)
-        if st.button("Analisis Sekarang"):
+        if st.button("Analisis"):
             if input_text.strip():
                 res, emo, conf = get_prediction(input_text)
                 save_to_firebase(input_text, res, conf)
