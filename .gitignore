@@ -1,3 +1,5 @@
 __pycache__/
 *.py[cod]
 .streamlit/config.toml
+firebase-key.json
+firebase-key.json

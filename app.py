@@ -112,7 +112,7 @@ if 'single_stats' not in st.session_state:
 @st.cache_resource
 def load_sentiment_model():
     try:
-        model = tf.keras.models.load_model('models/model_hybrid_coc.h5')
+        model = tf.keras.models.load_model('models/best_model_S1_&_S2_tanpa_SMOTE.h5')
         with open('models/tokenizer.pkl', 'rb') as f:
             tokenizer = pickle.load(f)
         with open('models/normalization_dicts.pkl', 'rb') as f:

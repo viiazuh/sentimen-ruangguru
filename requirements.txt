@@ -6,4 +6,8 @@ scikit-learn
 openpyxl
 xlsxwriter
 firebase-admin
+<<<<<<< HEAD
 plotly
+=======
+plotly
+>>>>>>> f55a3b2b4faf42687fed4a9a604d2e6e09eee2c1
