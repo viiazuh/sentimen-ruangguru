@@ -277,7 +277,7 @@ elif menu == "Data Management":
         st.write(f"📁 **{st.session_state.uploaded_filename}** — {len(df_view)} baris")
         st.dataframe(df_view.head(5), use_container_width=True)
         
-        if st.button("🔍 Jalankan Batch Analysis"):
+        if st.button("Analisis masal"):
             with st.spinner("Menganalisis..."):
                 text_col = next((c for c in ['text', 'ulasan', 'komentar', 'textDisplay'] if c in df_view.columns), df_view.columns[0])
                 texts = df_view[text_col].astype(str).tolist()
