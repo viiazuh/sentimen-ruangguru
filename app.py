@@ -10,7 +10,7 @@ import io
 import os
 import firebase_admin
 from firebase_admin import credentials, firestore
-import plotly.express as px # <-- Import baru untuk custom warna & pie chart
+import plotly.express as px
 
 # --- SET PAGE CONFIG ---
 st.set_page_config(page_title="Sentiment Pro", page_icon="🙂", layout="wide")
@@ -137,6 +137,39 @@ def get_history_firebase(limit=10):
         return [{"Teks": d.to_dict().get("teks"), "Hasil": d.to_dict().get("hasil"), "Waktu": d.to_dict()['waktu'].strftime("%H:%M:%S") if d.to_dict().get('waktu') else "N/A"} for d in docs]
     except: return []
 
+# --- 🔥 TAMBAHAN REVISI: FIREBASE HELPERS BATCH ANALYSIS ---
+def save_batch_to_firebase(filename, df_results):
+    try:
+        # Mengubah baris dataframe menjadi list objek/map NoSQL
+        records = df_results.to_dict(orient="records")
+        db.collection("batch_sessions").add({
+            "nama_file": filename,
+            "total_baris": len(df_results),
+            "waktu_eksekusi": firestore.SERVER_TIMESTAMP,
+            "hasil_analisis": records
+        })
+        return True
+    except Exception as e:
+        st.error(f"Gagal menyimpan sesi batch ke database: {e}")
+        return False
+
+def get_all_batch_sessions():
+    try:
+        docs = db.collection("batch_sessions").order_by("waktu_eksekusi", direction=firestore.Query.DESCENDING).stream()
+        sessions = []
+        for d in docs:
+            data = d.to_dict()
+            sessions.append({
+                "ID Sesi": d.id,
+                "Nama File": data.get("nama_file"),
+                "Total Data": data.get("total_baris"),
+                "Waktu": data['waktu_eksekusi'].strftime("%Y-%m-%d %H:%M:%S") if data.get('waktu_eksekusi') else "N/A",
+                "raw_data": data.get("hasil_analisis")
+            })
+        return sessions
+    except:
+        return []
+
 # --- MODEL LOADING ---
 @st.cache_resource
 def load_sentiment_model():
@@ -174,7 +207,6 @@ def get_prediction(text):
     return "Error", "⚠️", 0
 
 # --- PENGATURAN WARNA GRAFIK ---
-# Positif Biru, Negatif Merah, Netral Abu-abu
 COLOR_MAP = {
     "Positif": "#3b82f6", 
     "Negatif": "#ef4444", 
@@ -241,13 +273,13 @@ if menu == "Dashboard":
         st.info("Belum ada data aktivitas.")
 
     # ==========================================
-    # BAGIAN 2: STATISTIK BATCH ANALYSIS (DATA MANAGEMENT)
+    # BAGIAN 2: STATISTIK BATCH ANALYSIS (SESSION STATE SEMENTARA)
     # ==========================================
     if st.session_state.dataset is not None:
         st.divider()
         
         filename = st.session_state.uploaded_filename
-        st.markdown(f"<h4>📁 Statistik Batch Analysis (File: {filename})</h4>", unsafe_allow_html=True)
+        st.markdown(f"<h4>📁 Statistik Batch Analysis Terkini (File: {filename})</h4>", unsafe_allow_html=True)
         
         df_batch = st.session_state.dataset
         batch_total = len(df_batch)
@@ -279,7 +311,7 @@ if menu == "Dashboard":
             st.plotly_chart(fig_pie_batch, use_container_width=True)
             
         # --- TABEL PREVIEW & PAGINATION DI DASHBOARD ---
-        st.markdown("<div style='font-size:16px; font-weight:600; margin-top:20px; margin-bottom:10px;'>Preview Hasil Analisis</div>", unsafe_allow_html=True)
+        st.markdown("<div style='font-size:16px; font-weight:600; margin-top:20px; margin-bottom:10px;'>Preview Hasil Analisis Sesi Ini</div>", unsafe_allow_html=True)
         
         items_per_page_db = 10
         total_pages_db = max(1, (batch_total + items_per_page_db - 1) // items_per_page_db)
@@ -305,6 +337,44 @@ if menu == "Dashboard":
                       on_click=lambda: st.session_state.update(page_dashboard=st.session_state.page_dashboard + 1), 
                       disabled=(st.session_state.page_dashboard >= total_pages_db - 1), 
                       use_container_width=True)
+
+    # ==================================================
+    # 🔥 TAMBAHAN REVISI: RIWAYAT BATCH ANALYSIS DARI DATABASE FIREBASE
+    # ==================================================
+    st.markdown("<br><hr>", unsafe_allow_html=True)
+    st.markdown("<h4>📁 Riwayat Pengujian Batch Terstruktur (Dari Database)</h4>", unsafe_allow_html=True)
+    riwayat_batch = get_all_batch_sessions()
+    
+    if riwayat_batch:
+        options = [f"{b['Waktu']} — {b['Nama File']} ({b['Total Data']} Data)" for b in riwayat_batch]
+        pilihan = st.selectbox("Pilih Riwayat Sesi Analisis untuk Ditampilkan Kembali:", options)
+        
+        idx_pilihan = options.index(pilihan)
+        sesi_terpilih = riwayat_batch[idx_pilihan]
+        
+        # Mengonversi kembali Array of Maps NoSQL Firestore menjadi Dataframe Pandas
+        df_dari_db = pd.DataFrame(sesi_terpilih["raw_data"])
+        
+        col_view_chart, col_view_table = st.columns([1, 2])
+        with col_view_chart:
+            b_pos = len(df_dari_db[df_dari_db['Sentimen'] == "Positif"])
+            b_neg = len(df_dari_db[df_dari_db['Sentimen'] == "Negatif"])
+            b_net = len(df_dari_db[df_dari_db['Sentimen'] == "Netral"])
+            
+            df_chart_db = pd.DataFrame({
+                "Sentimen": ["Positif", "Negatif", "Netral"],
+                "Jumlah Data": [b_pos, b_neg, b_net]
+            })
+            
+            fig_pie_db = px.pie(df_chart_db, names="Sentimen", values="Jumlah Data", color="Sentimen", color_discrete_map=COLOR_MAP, hole=0.3)
+            fig_pie_db.update_layout(margin=dict(l=0, r=0, t=10, b=0), height=250, showlegend=True)
+            st.plotly_chart(fig_pie_db, use_container_width=True)
+            
+        with col_view_table:
+            st.markdown(f"**Pratinjau 5 Data Teratas Sesi ID: `{sesi_terpilih['ID Sesi']}`**")
+            st.dataframe(df_dari_db.head(5), use_container_width=True)
+    else:
+        st.info("Belum ada riwayat batch analysis yang tersimpan di dalam database Cloud Firestore.")
 
 # --- DATA MANAGEMENT ---
 elif menu == "Data Management":
@@ -342,13 +412,20 @@ elif menu == "Data Management":
                 res_list = [labels[np.argmax(p)] for p in preds]
                 conf_list = [int(np.max(p)*100) for p in preds]
                 
-                st.session_state.dataset = pd.DataFrame({
+                # Simpan ke session state aplikasi
+                df_hasil_batch = pd.DataFrame({
                     "Text Asli": texts, 
                     "Sentimen": res_list,
                     "Probabilitas(%)": conf_list
                 })
+                st.session_state.dataset = df_hasil_batch
                 st.session_state.page = 0 
                 st.session_state.page_dashboard = 0
+
+                # --- 🔥 TAMBAHAN REVISI: SIMPAN SEURUH PROSES MODEL KE DATABASE ---
+                tersimpan = save_batch_to_firebase(st.session_state.uploaded_filename, df_hasil_batch)
+                if tersimpan:
+                    st.success("Proses Batch Analysis selesai! Seluruh luaran model berhasil dikirim ke database Firestore secara terstruktur.")
 
     if st.session_state.dataset is not None:
         st.divider()
@@ -358,13 +435,13 @@ elif menu == "Data Management":
         total_n = len(res_df)
         p_n = len(res_df[res_df['Sentimen'] == "Positif"])
         neg_n = len(res_df[res_df['Sentimen'] == "Negatif"])
-        net_n = len(res_df[res_df['Sentimen'] == "Netral"])
+        pro_n = len(res_df[res_df['Sentimen'] == "Netral"])
         
         m1, m2, m3, m4 = st.columns(4)
         with m1: st.markdown(f'<div class="metric-card"><div class="metric-title">Total</div><div class="metric-value">{total_n}</div></div>', unsafe_allow_html=True)
         with m2: st.markdown(f'<div class="metric-card"><div class="metric-title">😊 Positif</div><div class="metric-value">{p_n}</div></div>', unsafe_allow_html=True)
         with m3: st.markdown(f'<div class="metric-card"><div class="metric-title">😞 Negatif</div><div class="metric-value">{neg_n}</div></div>', unsafe_allow_html=True)
-        with m4: st.markdown(f'<div class="metric-card"><div class="metric-title">😐 Netral</div><div class="metric-value">{net_n}</div></div>', unsafe_allow_html=True)
+        with m4: st.markdown(f'<div class="metric-card"><div class="metric-title">😐 Netral</div><div class="metric-value">{pro_n}</div></div>', unsafe_allow_html=True)
         
         # --- TABEL HASIL & PAGINATION DI DATA MANAGEMENT ---
         items_per_page = 10
@@ -394,7 +471,7 @@ elif menu == "Data Management":
 
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # --- DOWNLOAD & DELETE ACTION BAR (TANPA TOMBOL SIMPAN KE DATABASE) ---
+        # --- DOWNLOAD & DELETE ACTION BAR ---
         col_csv, col_excel, col_spacer, col_del = st.columns([1.2, 1.2, 5, 2])
         
         csv_data = res_df.to_csv(index=False).encode('utf-8')
