@@ -104,7 +104,7 @@ if 'uploaded_filename' not in st.session_state: st.session_state.uploaded_filena
 if 'page' not in st.session_state: st.session_state.page = 0 
 if 'page_dashboard' not in st.session_state: st.session_state.page_dashboard = 0 
 
-# State Baru untuk menampung statistik prediksi satuan (Pengganti Firebase)
+# State lokal untuk menyimpan data statistik prediksi satuan (sebagai pengganti Firebase)
 if 'single_stats' not in st.session_state:
     st.session_state.single_stats = {"total": 0, "positif": 0, "negatif": 0, "netral": 0}
 
@@ -315,4 +315,74 @@ elif menu == "Data Management":
         
         m1, m2, m3, m4 = st.columns(4)
         with m1: st.markdown(f'<div class="metric-card"><div class="metric-title">Total</div><div class="metric-value">{total_n}</div></div>', unsafe_allow_html=True)
-        with m2: st.markdown(f'<div class="metric-card"><div class="metric-title
+        with m2: st.markdown(f'<div class="metric-card"><div class="metric-title">😊 Positif</div><div class="metric-value">{p_n}</div></div>', unsafe_allow_html=True)
+        with m3: st.markdown(f'<div class="metric-card"><div class="metric-title">😞 Negatif</div><div class="metric-value">{neg_n}</div></div>', unsafe_allow_html=True)
+        with m4: st.markdown(f'<div class="metric-card"><div class="metric-title">😐 Netral</div><div class="metric-value">{net_n}</div></div>', unsafe_allow_html=True)
+        
+        # --- TABEL HASIL & PAGINATION DI DATA MANAGEMENT ---
+        items_per_page = 10
+        total_pages = max(1, (total_n + items_per_page - 1) // items_per_page)
+        
+        if st.session_state.page >= total_pages:
+            st.session_state.page = total_pages - 1
+            
+        start_idx = st.session_state.page * items_per_page
+        end_idx = start_idx + items_per_page
+        
+        st.dataframe(res_df.iloc[start_idx:end_idx], use_container_width=True)
+        
+        col_prev, col_info, col_next = st.columns([1, 4, 1])
+        with col_prev:
+            st.button("Prev", key="btn_prev_dm",
+                      on_click=lambda: st.session_state.update(page=st.session_state.page - 1), 
+                      disabled=(st.session_state.page == 0), 
+                      use_container_width=True)
+        with col_info:
+            st.markdown(f"<div style='text-align: center; margin-top: 10px; font-weight: 500;'>Halaman {st.session_state.page + 1} dari {total_pages}</div>", unsafe_allow_html=True)
+        with col_next:
+            st.button("Next", key="btn_next_dm",
+                      on_click=lambda: st.session_state.update(page=st.session_state.page + 1), 
+                      disabled=(st.session_state.page >= total_pages - 1), 
+                      use_container_width=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        # --- DOWNLOAD & DELETE ACTION BAR ---
+        col_csv, col_excel, col_spacer, col_del = st.columns([1.2, 1.2, 5, 2])
+        
+        csv_data = res_df.to_csv(index=False).encode('utf-8')
+        col_csv.download_button("⬇️ CSV", csv_data, "hasil_sentimen.csv", "text/csv", use_container_width=True)
+        
+        output_excel = io.BytesIO()
+        with pd.ExcelWriter(output_excel, engine='xlsxwriter') as writer:
+            res_df.to_excel(writer, index=False, sheet_name='Sentimen')
+        col_excel.download_button("⬇️ Excel", output_excel.getvalue(), "hasil_sentimen.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+        
+        if col_del.button("🗑️ Hapus Hasil"):
+            st.session_state.dataset = None
+            st.session_state.page = 0
+            st.session_state.page_dashboard = 0
+            st.rerun()
+
+# --- PREDICTION ---
+elif menu == "Sentiment Prediction":
+    st.markdown("<h2>Sentiment Prediction</h2>", unsafe_allow_html=True)
+    with st.container(border=True):
+        input_text = st.text_area("Masukkan teks ulasan", placeholder="Contoh: Keren banget!", height=150)
+        if st.button("Analisis"):
+            if input_text.strip():
+                res, emo, conf = get_prediction(input_text)
+                
+                # --- UPDATE LOCAL STATE STATISTIK ---
+                st.session_state.single_stats["total"] += 1
+                if res == "Positif":
+                    st.session_state.single_stats["positif"] += 1
+                elif res == "Negatif":
+                    st.session_state.single_stats["negatif"] += 1
+                elif res == "Netral":
+                    st.session_state.single_stats["netral"] += 1
+                
+                st.divider()
+                st.markdown(f"### Hasil: {res} {emo}")
+                st.write(f"Probabilitas: {conf}%")
+                st.progress(conf/100)
