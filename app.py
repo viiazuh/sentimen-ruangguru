@@ -10,7 +10,7 @@ import io
 import os
 import firebase_admin
 from firebase_admin import credentials, firestore
-import plotly.express as px # <-- Import baru untuk custom warna & pie chart
+import plotly.express as px 
 
 # --- SET PAGE CONFIG ---
 st.set_page_config(page_title="Sentiment Pro", page_icon="🙂", layout="wide")
@@ -131,12 +131,6 @@ def get_stats_firebase():
         return {"total": total, "positif": pos, "negatif": neg, "netral": net}
     except: return {"total": 0, "positif": 0, "negatif": 0, "netral": 0}
 
-def get_history_firebase(limit=10):
-    try:
-        docs = db.collection("history_sentiment").order_by("waktu", direction=firestore.Query.DESCENDING).limit(limit).stream()
-        return [{"Teks": d.to_dict().get("teks"), "Hasil": d.to_dict().get("hasil"), "Waktu": d.to_dict()['waktu'].strftime("%H:%M:%S") if d.to_dict().get('waktu') else "N/A"} for d in docs]
-    except: return []
-
 # --- MODEL LOADING ---
 @st.cache_resource
 def load_sentiment_model():
@@ -174,7 +168,6 @@ def get_prediction(text):
     return "Error", "⚠️", 0
 
 # --- PENGATURAN WARNA GRAFIK ---
-# Positif Biru, Negatif Merah, Netral Abu-abu
 COLOR_MAP = {
     "Positif": "#3b82f6", 
     "Negatif": "#ef4444", 
@@ -229,16 +222,6 @@ if menu == "Dashboard":
             st.plotly_chart(fig_pie_rt, use_container_width=True)
     else:
         st.info("Belum ada data grafik.")
-        
-    st.markdown("<div style='font-size:16px; font-weight:600; margin-top:20px; margin-bottom:10px;'>Aktivitas Terbaru</div>", unsafe_allow_html=True)
-    hist = get_history_firebase(5) 
-    if hist:
-        st.dataframe(pd.DataFrame(hist), use_container_width=True)
-        with st.expander("Lihat Riwayat Lengkap"):
-            full_hist = get_history_firebase(100)
-            st.table(full_hist)
-    else: 
-        st.info("Belum ada data aktivitas.")
 
     # ==========================================
     # BAGIAN 2: STATISTIK BATCH ANALYSIS (DATA MANAGEMENT)
@@ -394,7 +377,7 @@ elif menu == "Data Management":
 
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # --- DOWNLOAD & DELETE ACTION BAR (TANPA TOMBOL SIMPAN KE DATABASE) ---
+        # --- DOWNLOAD & DELETE ACTION BAR ---
         col_csv, col_excel, col_spacer, col_del = st.columns([1.2, 1.2, 5, 2])
         
         csv_data = res_df.to_csv(index=False).encode('utf-8')
