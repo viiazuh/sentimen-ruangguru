@@ -8,23 +8,10 @@ import numpy as np
 import pickle
 import io
 import os
-import firebase_admin
-from firebase_admin import credentials, firestore
 import plotly.express as px 
 
 # --- SET PAGE CONFIG ---
 st.set_page_config(page_title="Sentiment Pro", page_icon="🙂", layout="wide")
-
-# --- FIREBASE INITIALIZATION ---
-if not firebase_admin._apps:
-    try:
-        fb_credentials = dict(st.secrets["firebase"])
-        cred = credentials.Certificate(fb_credentials)
-        firebase_admin.initialize_app(cred)
-    except Exception as e:
-        st.error(f"Gagal inisialisasi Firebase: {e}")
-
-db = firestore.client()
 
 # --- CUSTOM CSS (PRESISI FIGMA & INTER FONT) ---
 st.markdown("""
@@ -110,26 +97,16 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- FIREBASE HELPERS ---
-def save_to_firebase(text, result, confidence):
-    try:
-        db.collection("history_sentiment").add({
-            "teks": text, "hasil": result, "Probabilitas": confidence, "waktu": firestore.SERVER_TIMESTAMP
-        })
-    except: pass
+# --- SESSION STATE INITIALIZATION ---
+if 'dataset' not in st.session_state: st.session_state.dataset = None
+if 'uploaded_df' not in st.session_state: st.session_state.uploaded_df = None
+if 'uploaded_filename' not in st.session_state: st.session_state.uploaded_filename = None
+if 'page' not in st.session_state: st.session_state.page = 0 
+if 'page_dashboard' not in st.session_state: st.session_state.page_dashboard = 0 
 
-def get_stats_firebase():
-    try:
-        docs = db.collection("history_sentiment").stream()
-        total, pos, neg, net = 0, 0, 0, 0
-        for doc in docs:
-            total += 1
-            res = doc.to_dict().get("hasil", "").lower()
-            if res == "positif": pos += 1
-            elif res == "negatif": neg += 1
-            elif res == "netral": net += 1
-        return {"total": total, "positif": pos, "negatif": neg, "netral": net}
-    except: return {"total": 0, "positif": 0, "negatif": 0, "netral": 0}
+# State Baru untuk menampung statistik prediksi satuan (Pengganti Firebase)
+if 'single_stats' not in st.session_state:
+    st.session_state.single_stats = {"total": 0, "positif": 0, "negatif": 0, "netral": 0}
 
 # --- MODEL LOADING ---
 @st.cache_resource
@@ -174,13 +151,6 @@ COLOR_MAP = {
     "Netral": "#9ca3af"
 }
 
-# --- SESSION STATE ---
-if 'dataset' not in st.session_state: st.session_state.dataset = None
-if 'uploaded_df' not in st.session_state: st.session_state.uploaded_df = None
-if 'uploaded_filename' not in st.session_state: st.session_state.uploaded_filename = None
-if 'page' not in st.session_state: st.session_state.page = 0 
-if 'page_dashboard' not in st.session_state: st.session_state.page_dashboard = 0 
-
 # --- SIDEBAR NAVIGATION ---
 with st.sidebar:
     st.markdown('<div class="sidebar-title">Sentiment🙂</div>', unsafe_allow_html=True)
@@ -192,10 +162,10 @@ if menu == "Dashboard":
     st.markdown("<h2>Dashboard</h2>", unsafe_allow_html=True)
     
     # ==========================================
-    # BAGIAN 1: STATISTIK PREDIKSI SATUAN (FIREBASE)
+    # BAGIAN 1: STATISTIK PREDIKSI SATUAN (SESSION STATE)
     # ==========================================
-    st.markdown("<h4>📊 Statistik Prediksi Satuan (Real-time)</h4>", unsafe_allow_html=True)
-    s = get_stats_firebase()
+    st.markdown("<h4>📊 Statistik Prediksi Satuan (Real-time Session)</h4>", unsafe_allow_html=True)
+    s = st.session_state.single_stats
     
     c1, c2, c3, c4 = st.columns(4)
     with c1: st.markdown(f'<div class="metric-card"><div class="metric-title">Total Data</div><div class="metric-value">{s["total"]}</div></div>', unsafe_allow_html=True)
@@ -203,7 +173,7 @@ if menu == "Dashboard":
     with c3: st.markdown(f'<div class="metric-card"><div class="metric-title">Negatif 😞</div><div class="metric-value">{s["negatif"]}</div></div>', unsafe_allow_html=True)
     with c4: st.markdown(f'<div class="metric-card"><div class="metric-title">Netral 😐</div><div class="metric-value">{s["netral"]}</div></div>', unsafe_allow_html=True)
     
-    st.markdown("<div style='font-size:16px; font-weight:600; margin-bottom:10px; margin-top:10px;'>Grafik Sentimen (Real-time)</div>", unsafe_allow_html=True)
+    st.markdown("<div style='font-size:16px; font-weight:600; margin-bottom:10px; margin-top:10px;'>Grafik Sentimen (Real-time Session)</div>", unsafe_allow_html=True)
     if s["total"] > 0:
         df_rt = pd.DataFrame({
             "Sentimen": ["Positif", "Negatif", "Netral"],
@@ -221,7 +191,7 @@ if menu == "Dashboard":
             fig_pie_rt.update_layout(margin=dict(l=0, r=0, t=20, b=0))
             st.plotly_chart(fig_pie_rt, use_container_width=True)
     else:
-        st.info("Belum ada data grafik.")
+        st.info("Belum ada data grafik ulasan satuan pada sesi ini.")
 
     # ==========================================
     # BAGIAN 2: STATISTIK BATCH ANALYSIS (DATA MANAGEMENT)
@@ -345,65 +315,4 @@ elif menu == "Data Management":
         
         m1, m2, m3, m4 = st.columns(4)
         with m1: st.markdown(f'<div class="metric-card"><div class="metric-title">Total</div><div class="metric-value">{total_n}</div></div>', unsafe_allow_html=True)
-        with m2: st.markdown(f'<div class="metric-card"><div class="metric-title">😊 Positif</div><div class="metric-value">{p_n}</div></div>', unsafe_allow_html=True)
-        with m3: st.markdown(f'<div class="metric-card"><div class="metric-title">😞 Negatif</div><div class="metric-value">{neg_n}</div></div>', unsafe_allow_html=True)
-        with m4: st.markdown(f'<div class="metric-card"><div class="metric-title">😐 Netral</div><div class="metric-value">{net_n}</div></div>', unsafe_allow_html=True)
-        
-        # --- TABEL HASIL & PAGINATION DI DATA MANAGEMENT ---
-        items_per_page = 10
-        total_pages = max(1, (total_n + items_per_page - 1) // items_per_page)
-        
-        if st.session_state.page >= total_pages:
-            st.session_state.page = total_pages - 1
-            
-        start_idx = st.session_state.page * items_per_page
-        end_idx = start_idx + items_per_page
-        
-        st.dataframe(res_df.iloc[start_idx:end_idx], use_container_width=True)
-        
-        col_prev, col_info, col_next = st.columns([1, 4, 1])
-        with col_prev:
-            st.button("Prev", key="btn_prev_dm",
-                      on_click=lambda: st.session_state.update(page=st.session_state.page - 1), 
-                      disabled=(st.session_state.page == 0), 
-                      use_container_width=True)
-        with col_info:
-            st.markdown(f"<div style='text-align: center; margin-top: 10px; font-weight: 500;'>Halaman {st.session_state.page + 1} dari {total_pages}</div>", unsafe_allow_html=True)
-        with col_next:
-            st.button("Next", key="btn_next_dm",
-                      on_click=lambda: st.session_state.update(page=st.session_state.page + 1), 
-                      disabled=(st.session_state.page >= total_pages - 1), 
-                      use_container_width=True)
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        # --- DOWNLOAD & DELETE ACTION BAR ---
-        col_csv, col_excel, col_spacer, col_del = st.columns([1.2, 1.2, 5, 2])
-        
-        csv_data = res_df.to_csv(index=False).encode('utf-8')
-        col_csv.download_button("⬇️ CSV", csv_data, "hasil_sentimen.csv", "text/csv", use_container_width=True)
-        
-        output_excel = io.BytesIO()
-        with pd.ExcelWriter(output_excel, engine='xlsxwriter') as writer:
-            res_df.to_excel(writer, index=False, sheet_name='Sentimen')
-        col_excel.download_button("⬇️ Excel", output_excel.getvalue(), "hasil_sentimen.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
-        
-        if col_del.button("🗑️ Hapus Hasil"):
-            st.session_state.dataset = None
-            st.session_state.page = 0
-            st.session_state.page_dashboard = 0
-            st.rerun()
-
-# --- PREDICTION ---
-elif menu == "Sentiment Prediction":
-    st.markdown("<h2>Sentiment Prediction</h2>", unsafe_allow_html=True)
-    with st.container(border=True):
-        input_text = st.text_area("Masukkan teks ulasan", placeholder="Contoh: Keren banget!", height=150)
-        if st.button("Analisis"):
-            if input_text.strip():
-                res, emo, conf = get_prediction(input_text)
-                save_to_firebase(input_text, res, conf)
-                st.divider()
-                st.markdown(f"### Hasil: {res} {emo}")
-                st.write(f"Probabilitas: {conf}%")
-                st.progress(conf/100)
+        with m2: st.markdown(f'<div class="metric-card"><div class="metric-title
