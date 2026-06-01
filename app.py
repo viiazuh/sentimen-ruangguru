@@ -107,13 +107,20 @@ class TextPreprocessor:
         if isinstance(text, str):
             text = text.lower()
             text = re.sub(r'[^\w\s]', '', text)
+        elif isinstance(text, list):
+            text = [str(t).lower() for t in text]
+            text = [re.sub(r'[^\w\s]', '', t) for t in text]
         return text
+    def fit(self, X, y=None):
+        return self
 
 class KerasPredictor:
     def __init__(self, *args, **kwargs):
         pass
     def transform(self, text):
         return text
+    def fit(self, X, y=None):
+        return self
 
 # --- SESSION STATE INITIALIZATION ---
 if 'dataset' not in st.session_state: st.session_state.dataset = None
@@ -149,50 +156,31 @@ def load_sentiment_model():
 
 model_ml, pipeline_ml = load_sentiment_model()
 
-# --- HELPER: EKSTRAKSI SEQUENCE SECARA FLEKSIBEL DARI OBJEK FERDINAN ---
+# --- HELPER: EKSTRAKSI UTAMA PIPELINE SCIKIT-LEARN ---
 def extract_sequences(pipeline, texts_list):
-    """Membongkar objek KerasPredictor / Tokenizer secara dinamis"""
-    # DEBUG UTAMA: Munculkan semua isi daleman objek ke layar biar kita tahu nama variabelnya!
-    st.warning("⚠️ **DEBUG MODE — Struktur Atribut Object Pipeline:**")
-    st.code(str(dir(pipeline)))
-    
-    if hasattr(pipeline, 'texts_to_sequences'):
-        return pipeline.texts_to_sequences(texts_list)
-    elif hasattr(pipeline, 'tokenizer') and pipeline.tokenizer and hasattr(pipeline.tokenizer, 'texts_to_sequences'):
-        return pipeline.tokenizer.texts_to_sequences(texts_list)
-    elif hasattr(pipeline, 'named_steps') and 'tokenizer' in pipeline.named_steps:
-        return pipeline.named_steps['tokenizer'].texts_to_sequences(texts_list)
-    
-    # Scan otomatis seluruh atribut di dalam objek
-    for attr in dir(pipeline):
-        obj = getattr(pipeline, attr)
-        if hasattr(obj, 'texts_to_sequences'):
-            return obj.texts_to_sequences(texts_list)
+    """Mengeksekusi transformasi biner dari Scikit-Learn Pipeline Ferdinan"""
+    try:
+        # Jalankan transformasi pipeline utama milik Ferdinan
+        transformed = pipeline.transform(texts_list)
+        
+        # Jika hasilnya sparse matrix (efek Tfidf/CountVectorizer), ubah jadi array biasa
+        if hasattr(transformed, 'toarray'):
+            transformed = transformed.toarray()
             
-    if hasattr(pipeline, 'transform'):
-        try:
-            transformed = pipeline.transform(texts_list)
-            if isinstance(transformed, list) and len(transformed) > 0 and isinstance(transformed[0], (int, np.integer)):
-                return [transformed]
-            for attr in dir(pipeline):
-                obj = getattr(pipeline, attr)
-                if hasattr(obj, 'texts_to_sequences'):
-                    return obj.texts_to_sequences(transformed)
-        except:
-            pass
-            
-    return None
+        return transformed
+    except Exception as e:
+        # Fallback cadangan: scan tokenizer internal jika transform utama mentok
+        if hasattr(pipeline, 'named_steps') and 'tokenizer' in pipeline.named_steps:
+            return pipeline.named_steps['tokenizer'].texts_to_sequences(texts_list)
+        return None
 
 def get_prediction(text):
     if model_ml and pipeline_ml:
         try:
-            # Preprocessing teks manual dasar
-            clean_text = text.lower()
-            clean_text = re.sub(r'[^\w\s]', '', clean_text)
-            
-            seq = extract_sequences(pipeline_ml, [clean_text])
+            # Kirim teks langsung ke struktur ekstraksi sequence
+            seq = extract_sequences(pipeline_ml, [text])
             if seq is None:
-                return "Error: Struktur Tokenizer tidak cocok", "⚠️", 0
+                return "Error: Gagal konversi teks ke angka", "⚠️", 0
                 
             padded = tf.keras.preprocessing.sequence.pad_sequences(seq, maxlen=100, padding='post')
             prediction = model_ml.predict(padded, verbose=0)
@@ -329,7 +317,7 @@ elif menu == "Data Management":
                 texts = df_view[text_col].astype(str).tolist()
                 prog = st.progress(0)
                 
-                seqs = extract_sequences(pipeline_ml, [t.lower() for t in texts])
+                seqs = extract_sequences(pipeline_ml, texts)
                 prog.progress(0.5)
                 
                 if seqs is None:
