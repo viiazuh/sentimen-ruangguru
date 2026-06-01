@@ -129,25 +129,23 @@ if 'single_stats' not in st.session_state:
 @st.cache_resource
 def load_sentiment_model():
     try:
-        import os
-
-        st.write("Model ditemukan:", os.path.exists("models/model_final.h5"))
-        st.write("Pipeline ditemukan:", os.path.exists("models/pipeline_s12_raw.pkl"))
-
-        model = tf.keras.models.load_model(
-            "models/model_final.h5",
-            compile=False
-        )
-
-        pipeline = joblib.load(
-            "models/pipeline_s12_raw.pkl"
-        )
-
-        st.success("Model berhasil dimuat")
+        # Ambil jalur folder tempat file app.py ini berada secara dinamis
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        
+        # Gabungkan jalur folder dengan file model secara absolut
+        model_path = os.path.join(BASE_DIR, 'models', 'model_final.h5')
+        
+        # Muat model menggunakan jalur absolut yang dijamin valid oleh OS
+        model = tf.keras.models.load_model(model_path)
+        
+        # Gabungkan jalur untuk file pkl
+        pkl_path = os.path.join(BASE_DIR, 'models', 'pipeline_s12_raw.pkl')
+        with open(pkl_path, 'rb') as f:
+            pipeline = joblib.load(f)
+            
         return model, pipeline
-
     except Exception as e:
-        st.error(f"ERROR MODEL: {str(e)}")
+        st.error(f"Gagal memuat model: {e}")
         return None, None
 
 model_ml, pipeline_ml = load_sentiment_model()
