@@ -97,6 +97,19 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
+# =========================================================================
+# DEFINISI CLASS: TextPreprocessor wajib ada di modul __main__ agar pkl terbaca
+# =========================================================================
+class TextPreprocessor:
+    def __init__(self):
+        pass
+
+    def transform(self, text):
+        if isinstance(text, str):
+            text = text.lower()
+            text = re.sub(r'[^\w\s]', '', text)
+        return text
+
 # --- SESSION STATE INITIALIZATION ---
 if 'dataset' not in st.session_state: st.session_state.dataset = None
 if 'uploaded_df' not in st.session_state: st.session_state.uploaded_df = None
@@ -104,7 +117,7 @@ if 'uploaded_filename' not in st.session_state: st.session_state.uploaded_filena
 if 'page' not in st.session_state: st.session_state.page = 0 
 if 'page_dashboard' not in st.session_state: st.session_state.page_dashboard = 0 
 
-# State lokal untuk menyimpan data statistik prediksi satuan (sebagai pengganti Firebase)
+# State lokal pengganti database eksternal untuk melayani statistik sesi analitik
 if 'single_stats' not in st.session_state:
     st.session_state.single_stats = {"total": 0, "positif": 0, "negatif": 0, "netral": 0}
 
@@ -113,36 +126,34 @@ if 'single_stats' not in st.session_state:
 def load_sentiment_model():
     try:
         model = tf.keras.models.load_model('models/best_model_S1_&_S2_tanpa_SMOTE.h5')
-        with open('models/tokenizer.pkl', 'rb') as f:
-            tokenizer = pickle.load(f)
+        # Load murni 1 file pkl sesuai arahan Ferdinan
         with open('models/pipeline_s12_raw.pkl', 'rb') as f:
-            norm_dict = pickle.load(f)
-        return model, tokenizer, norm_dict
+            pipeline = joblib.load(f)
+        return model, pipeline
     except Exception as e:
         st.error(f"Gagal memuat model: {e}")
-        return None, None, None
+        return None, None
 
-model_ml, tokenizer_ml, norm_dict = load_sentiment_model()
-
-def normalize_text(text):
-    text = str(text).lower()
-    text = re.sub(r'[^\w\s]', '', text)
-    words = text.split()
-    if norm_dict:
-        normalized = [norm_dict.get(word, word) for word in words]
-        return " ".join(normalized).strip()
-    return text.strip()
+model_ml, pipeline_ml = load_sentiment_model()
 
 def get_prediction(text):
-    if model_ml and tokenizer_ml:
-        normalized = normalize_text(text)
-        seq = tokenizer_ml.texts_to_sequences([normalized])
-        padded = tf.keras.preprocessing.sequence.pad_sequences(seq, maxlen=100, padding='post')
-        prediction = model_ml.predict(padded, verbose=0)
-        labels, emojis = ["Netral", "Negatif", "Positif"], ["😐", "😞", "😀"]
-        idx = np.argmax(prediction)
-        return labels[idx], emojis[idx], int(np.max(prediction) * 100)
-    return "Error", "⚠️", 0
+    if model_ml and pipeline_ml:
+        try:
+            # Memanfaatkan objek kustom pipeline untuk mengekstrak sekuens fitur numerik
+            if hasattr(pipeline_ml, 'texts_to_sequences'):
+                seq = pipeline_ml.texts_to_sequences([text])
+            else:
+                seq = pipeline_ml.transform([text])
+                
+            padded = tf.keras.preprocessing.sequence.pad_sequences(seq, maxlen=100, padding='post')
+            prediction = model_ml.predict(padded, verbose=0)
+            
+            labels, emojis = ["Netral", "Negatif", "Positif"], ["😐", "😞", "😀"]
+            idx = np.argmax(prediction)
+            return labels[idx], emojis[idx], int(np.max(prediction) * 100)
+        except Exception as e:
+            return f"Error Proses: {e}", "⚠️", 0
+    return "Error Model", "⚠️", 0
 
 # --- PENGATURAN WARNA GRAFIK ---
 COLOR_MAP = {
@@ -162,9 +173,9 @@ if menu == "Dashboard":
     st.markdown("<h2>Dashboard</h2>", unsafe_allow_html=True)
     
     # ==========================================
-    # BAGIAN 1: STATISTIK PREDIKSI SATUAN (SESSION STATE)
+    # BAGIAN 1: STATISTIK ANALISIS TUNGGAL
     # ==========================================
-    st.markdown("<h4>📊 Statistik Prediksi Satuan (Real-time Session)</h4>", unsafe_allow_html=True)
+    st.markdown("<h4>📊 Statistik Analisis Tunggal (Real-time Session)</h4>", unsafe_allow_html=True)
     s = st.session_state.single_stats
     
     c1, c2, c3, c4 = st.columns(4)
@@ -191,16 +202,16 @@ if menu == "Dashboard":
             fig_pie_rt.update_layout(margin=dict(l=0, r=0, t=20, b=0))
             st.plotly_chart(fig_pie_rt, use_container_width=True)
     else:
-        st.info("Belum ada data grafik ulasan satuan pada sesi ini.")
+        st.info("Belum ada data grafik ulasan tunggal pada sesi ini.")
 
     # ==========================================
-    # BAGIAN 2: STATISTIK BATCH ANALYSIS (DATA MANAGEMENT)
+    # BAGIAN 2: STATISTIK ANALISIS MASSAL
     # ==========================================
     if st.session_state.dataset is not None:
         st.divider()
         
         filename = st.session_state.uploaded_filename
-        st.markdown(f"<h4>📁 Statistik Batch Analysis (File: {filename})</h4>", unsafe_allow_html=True)
+        st.markdown(f"<h4>📁 Statistik Analisis Massal (File: {filename})</h4>", unsafe_allow_html=True)
         
         df_batch = st.session_state.dataset
         batch_total = len(df_batch)
@@ -209,7 +220,7 @@ if menu == "Dashboard":
         batch_net = len(df_batch[df_batch['Sentimen'] == "Netral"])
         
         b1, b2, b3, b4 = st.columns(4)
-        with b1: st.markdown(f'<div class="metric-card"><div class="metric-title">Total Batch</div><div class="metric-value">{batch_total}</div></div>', unsafe_allow_html=True)
+        with b1: st.markdown(f'<div class="metric-card"><div class="metric-title">Total Massal</div><div class="metric-value">{batch_total}</div></div>', unsafe_allow_html=True)
         with b2: st.markdown(f'<div class="metric-card"><div class="metric-title">Positif 😊</div><div class="metric-value">{batch_pos}</div></div>', unsafe_allow_html=True)
         with b3: st.markdown(f'<div class="metric-card"><div class="metric-title">Negatif 😞</div><div class="metric-value">{batch_neg}</div></div>', unsafe_allow_html=True)
         with b4: st.markdown(f'<div class="metric-card"><div class="metric-title">Netral 😐</div><div class="metric-value">{batch_net}</div></div>', unsafe_allow_html=True)
@@ -277,16 +288,19 @@ elif menu == "Data Management":
         st.write(f"📁 **{st.session_state.uploaded_filename}** — {len(df_view)} baris")
         st.dataframe(df_view.head(5), use_container_width=True)
         
-        if st.button("Analisis massal"):
+        if st.button("Jalankan Analisis Massal"):
             with st.spinner("Menganalisis..."):
                 text_col = next((c for c in ['text', 'ulasan', 'komentar', 'textDisplay'] if c in df_view.columns), df_view.columns[0])
                 texts = df_view[text_col].astype(str).tolist()
                 prog = st.progress(0)
                 
-                normalized = [normalize_text(t) for t in texts]
-                prog.progress(0.4)
+                # Mengandalkan transformasi skema terpadu milik Ferdinan
+                if hasattr(pipeline_ml, 'texts_to_sequences'):
+                    seqs = pipeline_ml.texts_to_sequences(texts)
+                else:
+                    seqs = pipeline_ml.transform(texts)
+                prog.progress(0.5)
                 
-                seqs = tokenizer_ml.texts_to_sequences(normalized)
                 padded = tf.keras.preprocessing.sequence.pad_sequences(seqs, maxlen=100, padding='post')
                 preds = model_ml.predict(padded, batch_size=512, verbose=0)
                 prog.progress(1.0)
@@ -369,6 +383,8 @@ elif menu == "Sentiment Prediction":
     st.markdown("<h2>Sentiment Prediction</h2>", unsafe_allow_html=True)
     with st.container(border=True):
         input_text = st.text_area("Masukkan teks ulasan", placeholder="Contoh: Keren banget!", height=150)
+        
+        # Sesuai request: Tombol operasional tetap ringkas menggunakan teks "Analisis"
         if st.button("Analisis"):
             if input_text.strip():
                 res, emo, conf = get_prediction(input_text)
@@ -383,6 +399,6 @@ elif menu == "Sentiment Prediction":
                     st.session_state.single_stats["netral"] += 1
                 
                 st.divider()
-                st.markdown(f"### Hasil: {res} {emo}")
+                st.markdown(f"### Hasil: {res} {mo}")
                 st.write(f"Probabilitas: {conf}%")
                 st.progress(conf/100)
