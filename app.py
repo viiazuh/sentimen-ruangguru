@@ -129,7 +129,8 @@ if 'single_stats' not in st.session_state:
 @st.cache_resource
 def load_sentiment_model():
     try:
-        model = tf.keras.models.load_model('models/best_model_S1_&_S2_tanpa_SMOTE.h5')
+        # UBAH BARIS INI: Sesuaikan dengan nama file baru yang super clean
+        model = tf.keras.models.load_model('models/model_final.h5')
         with open('models/pipeline_s12_raw.pkl', 'rb') as f:
             pipeline = joblib.load(f)
         return model, pipeline
