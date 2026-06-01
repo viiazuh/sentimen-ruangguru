@@ -129,23 +129,27 @@ if 'single_stats' not in st.session_state:
 @st.cache_resource
 def load_sentiment_model():
     try:
-        # Ambil jalur folder tempat file app.py ini berada secara dinamis
         BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-        
-        # Gabungkan jalur folder dengan file model secara absolut
         model_path = os.path.join(BASE_DIR, 'models', 'model_final.h5')
-        
-        # Muat model menggunakan jalur absolut yang dijamin valid oleh OS
-        model = tf.keras.models.load_model(model_path)
-        
-        # Gabungkan jalur untuk file pkl
         pkl_path = os.path.join(BASE_DIR, 'models', 'pipeline_s12_raw.pkl')
+        
+        # Indikator pengecekan file fisik di server
+        st.sidebar.info(f"Model ditemukan: {os.path.exists(model_path)}")
+        st.sidebar.info(f"Pipeline ditemukan: {os.path.exists(pkl_path)}")
+        
+        # 1. Muat Pipeline Keras Tokenizer dahulu menggunakan joblib
         with open(pkl_path, 'rb') as f:
             pipeline = joblib.load(f)
             
+        # 2. Muat Model h5 Deep Learning menggunakan TensorFlow
+        model = tf.keras.models.load_model(model_path)
+        
         return model, pipeline
     except Exception as e:
-        st.error(f"Gagal memuat model: {e}")
+        st.sidebar.error(f"Gagal memuat model/pipeline: {e}")
+        # Cetak traceback penuh ke layar agar kita tahu persis file mana yang memicu error
+        import traceback
+        st.sidebar.text(traceback.format_exc())
         return None, None
 
 model_ml, pipeline_ml = load_sentiment_model()
