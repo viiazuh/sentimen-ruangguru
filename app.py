@@ -126,7 +126,7 @@ if 'single_stats' not in st.session_state:
     st.session_state.single_stats = {"total": 0, "positif": 0, "negatif": 0, "netral": 0}
 
 # --- MODEL LOADING ---
-@@st.cache_resource
+@st.cache_resource
 def load_sentiment_model():
     try:
         import os
