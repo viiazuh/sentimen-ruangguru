@@ -139,12 +139,8 @@ model_ml, pipeline_ml = load_sentiment_model()
 def get_prediction(text):
     if model_ml and pipeline_ml:
         try:
-            # Memanfaatkan objek kustom pipeline untuk mengekstrak sekuens fitur numerik
-            if hasattr(pipeline_ml, 'texts_to_sequences'):
-                seq = pipeline_ml.texts_to_sequences([text])
-            else:
-                seq = pipeline_ml.transform([text])
-                
+            # FIX: Menggunakan texts_to_sequences karena objek aslinya Keras Tokenizer
+            seq = pipeline_ml.texts_to_sequences([text])
             padded = tf.keras.preprocessing.sequence.pad_sequences(seq, maxlen=100, padding='post')
             prediction = model_ml.predict(padded, verbose=0)
             
@@ -294,11 +290,8 @@ elif menu == "Data Management":
                 texts = df_view[text_col].astype(str).tolist()
                 prog = st.progress(0)
                 
-                # Mengandalkan transformasi skema terpadu milik Ferdinan
-                if hasattr(pipeline_ml, 'texts_to_sequences'):
-                    seqs = pipeline_ml.texts_to_sequences(texts)
-                else:
-                    seqs = pipeline_ml.transform(texts)
+                # FIX: Menggunakan texts_to_sequences karena objek aslinya Keras Tokenizer
+                seqs = pipeline_ml.texts_to_sequences(texts)
                 prog.progress(0.5)
                 
                 padded = tf.keras.preprocessing.sequence.pad_sequences(seqs, maxlen=100, padding='post')
@@ -384,7 +377,6 @@ elif menu == "Sentiment Prediction":
     with st.container(border=True):
         input_text = st.text_area("Masukkan teks ulasan", placeholder="Contoh: Keren banget!", height=150)
         
-        # Sesuai request: Tombol operasional tetap ringkas menggunakan teks "Analisis"
         if st.button("Analisis"):
             if input_text.strip():
                 res, emo, conf = get_prediction(input_text)
@@ -399,6 +391,6 @@ elif menu == "Sentiment Prediction":
                     st.session_state.single_stats["netral"] += 1
                 
                 st.divider()
-                st.markdown(f"### Hasil: {res} {mo}")
+                st.markdown(f"### Hasil: {res} {emo}")
                 st.write(f"Probabilitas: {conf}%")
                 st.progress(conf/100)
