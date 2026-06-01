@@ -98,16 +98,21 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# DEFINISI CLASS: TextPreprocessor wajib ada di modul __main__ agar pkl terbaca
+# DEFINISI CLASS OLEH FERDINAN: Wajib ada di __main__ agar pkl tidak error
 # =========================================================================
 class TextPreprocessor:
     def __init__(self):
         pass
-
     def transform(self, text):
         if isinstance(text, str):
             text = text.lower()
             text = re.sub(r'[^\w\s]', '', text)
+        return text
+
+class KerasPredictor:
+    def __init__(self, *args, **kwargs):
+        pass
+    def transform(self, text):
         return text
 
 # --- SESSION STATE INITIALIZATION ---
@@ -117,7 +122,6 @@ if 'uploaded_filename' not in st.session_state: st.session_state.uploaded_filena
 if 'page' not in st.session_state: st.session_state.page = 0 
 if 'page_dashboard' not in st.session_state: st.session_state.page_dashboard = 0 
 
-# State lokal pengganti database eksternal untuk melayani statistik sesi analitik
 if 'single_stats' not in st.session_state:
     st.session_state.single_stats = {"total": 0, "positif": 0, "negatif": 0, "netral": 0}
 
@@ -126,7 +130,6 @@ if 'single_stats' not in st.session_state:
 def load_sentiment_model():
     try:
         model = tf.keras.models.load_model('models/best_model_S1_&_S2_tanpa_SMOTE.h5')
-        # Load murni 1 file pkl sesuai arahan Ferdinan
         with open('models/pipeline_s12_raw.pkl', 'rb') as f:
             pipeline = joblib.load(f)
         return model, pipeline
@@ -139,8 +142,17 @@ model_ml, pipeline_ml = load_sentiment_model()
 def get_prediction(text):
     if model_ml and pipeline_ml:
         try:
-            # FIX: Menggunakan texts_to_sequences karena objek aslinya Keras Tokenizer
-            seq = pipeline_ml.texts_to_sequences([text])
+            # Menguji fleksibilitas method objek pipeline biner Ferdinan
+            if hasattr(pipeline_ml, 'texts_to_sequences'):
+                seq = pipeline_ml.texts_to_sequences([text])
+            elif hasattr(pipeline_ml, 'transform'):
+                seq = pipeline_ml.transform([text])
+                if isinstance(seq, list) and isinstance(seq[0], str):
+                    if hasattr(pipeline_ml, 'tokenizer') and pipeline_ml.tokenizer:
+                        seq = pipeline_ml.tokenizer.texts_to_sequences(seq)
+                    elif hasattr(pipeline_ml, 'named_steps') and 'tokenizer' in pipeline_ml.named_steps:
+                        seq = pipeline_ml.named_steps['tokenizer'].texts_to_sequences(seq)
+            
             padded = tf.keras.preprocessing.sequence.pad_sequences(seq, maxlen=100, padding='post')
             prediction = model_ml.predict(padded, verbose=0)
             
@@ -152,11 +164,7 @@ def get_prediction(text):
     return "Error Model", "⚠️", 0
 
 # --- PENGATURAN WARNA GRAFIK ---
-COLOR_MAP = {
-    "Positif": "#3b82f6", 
-    "Negatif": "#ef4444", 
-    "Netral": "#9ca3af"
-}
+COLOR_MAP = {"Positif": "#3b82f6", "Negatif": "#ef4444", "Netral": "#9ca3af"}
 
 # --- SIDEBAR NAVIGATION ---
 with st.sidebar:
@@ -168,9 +176,6 @@ with st.sidebar:
 if menu == "Dashboard":
     st.markdown("<h2>Dashboard</h2>", unsafe_allow_html=True)
     
-    # ==========================================
-    # BAGIAN 1: STATISTIK ANALISIS TUNGGAL
-    # ==========================================
     st.markdown("<h4>📊 Statistik Analisis Tunggal (Real-time Session)</h4>", unsafe_allow_html=True)
     s = st.session_state.single_stats
     
@@ -200,12 +205,8 @@ if menu == "Dashboard":
     else:
         st.info("Belum ada data grafik ulasan tunggal pada sesi ini.")
 
-    # ==========================================
-    # BAGIAN 2: STATISTIK ANALISIS MASSAL
-    # ==========================================
     if st.session_state.dataset is not None:
         st.divider()
-        
         filename = st.session_state.uploaded_filename
         st.markdown(f"<h4>📁 Statistik Analisis Massal (File: {filename})</h4>", unsafe_allow_html=True)
         
@@ -238,7 +239,6 @@ if menu == "Dashboard":
             fig_pie_batch.update_layout(margin=dict(l=0, r=0, t=20, b=0))
             st.plotly_chart(fig_pie_batch, use_container_width=True)
             
-        # --- TABEL PREVIEW & PAGINATION DI DASHBOARD ---
         st.markdown("<div style='font-size:16px; font-weight:600; margin-top:20px; margin-bottom:10px;'>Preview Hasil Analisis</div>", unsafe_allow_html=True)
         
         items_per_page_db = 10
@@ -256,15 +256,13 @@ if menu == "Dashboard":
         with col_prev_db:
             st.button("Prev", key="btn_prev_dash",
                       on_click=lambda: st.session_state.update(page_dashboard=st.session_state.page_dashboard - 1), 
-                      disabled=(st.session_state.page_dashboard == 0), 
-                      use_container_width=True)
+                      disabled=(st.session_state.page_dashboard == 0), use_container_width=True)
         with col_info_db:
             st.markdown(f"<div style='text-align: center; margin-top: 10px; font-weight: 500;'>Halaman {st.session_state.page_dashboard + 1} dari {total_pages_db}</div>", unsafe_allow_html=True)
         with col_next_db:
             st.button("Next", key="btn_next_dash",
                       on_click=lambda: st.session_state.update(page_dashboard=st.session_state.page_dashboard + 1), 
-                      disabled=(st.session_state.page_dashboard >= total_pages_db - 1), 
-                      use_container_width=True)
+                      disabled=(st.session_state.page_dashboard >= total_pages_db - 1), use_container_width=True)
 
 # --- DATA MANAGEMENT ---
 elif menu == "Data Management":
@@ -290,8 +288,15 @@ elif menu == "Data Management":
                 texts = df_view[text_col].astype(str).tolist()
                 prog = st.progress(0)
                 
-                # FIX: Menggunakan texts_to_sequences karena objek aslinya Keras Tokenizer
-                seqs = pipeline_ml.texts_to_sequences(texts)
+                if hasattr(pipeline_ml, 'texts_to_sequences'):
+                    seqs = pipeline_ml.texts_to_sequences(texts)
+                elif hasattr(pipeline_ml, 'transform'):
+                    seqs = pipeline_ml.transform(texts)
+                    if isinstance(seqs, list) and len(seqs) > 0 and isinstance(seqs[0], str):
+                        if hasattr(pipeline_ml, 'tokenizer') and pipeline_ml.tokenizer:
+                            seqs = pipeline_ml.tokenizer.texts_to_sequences(seqs)
+                        elif hasattr(pipeline_ml, 'named_steps') and 'tokenizer' in pipeline_ml.named_steps:
+                            seqs = pipeline_ml.named_steps['tokenizer'].texts_to_sequences(seqs)
                 prog.progress(0.5)
                 
                 padded = tf.keras.preprocessing.sequence.pad_sequences(seqs, maxlen=100, padding='post')
@@ -326,7 +331,6 @@ elif menu == "Data Management":
         with m3: st.markdown(f'<div class="metric-card"><div class="metric-title">😞 Negatif</div><div class="metric-value">{neg_n}</div></div>', unsafe_allow_html=True)
         with m4: st.markdown(f'<div class="metric-card"><div class="metric-title">😐 Netral</div><div class="metric-value">{net_n}</div></div>', unsafe_allow_html=True)
         
-        # --- TABEL HASIL & PAGINATION DI DATA MANAGEMENT ---
         items_per_page = 10
         total_pages = max(1, (total_n + items_per_page - 1) // items_per_page)
         
@@ -342,19 +346,15 @@ elif menu == "Data Management":
         with col_prev:
             st.button("Prev", key="btn_prev_dm",
                       on_click=lambda: st.session_state.update(page=st.session_state.page - 1), 
-                      disabled=(st.session_state.page == 0), 
-                      use_container_width=True)
+                      disabled=(st.session_state.page == 0), use_container_width=True)
         with col_info:
             st.markdown(f"<div style='text-align: center; margin-top: 10px; font-weight: 500;'>Halaman {st.session_state.page + 1} dari {total_pages}</div>", unsafe_allow_html=True)
         with col_next:
             st.button("Next", key="btn_next_dm",
                       on_click=lambda: st.session_state.update(page=st.session_state.page + 1), 
-                      disabled=(st.session_state.page >= total_pages - 1), 
-                      use_container_width=True)
+                      disabled=(st.session_state.page >= total_pages - 1), use_container_width=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
-        
-        # --- DOWNLOAD & DELETE ACTION BAR ---
         col_csv, col_excel, col_spacer, col_del = st.columns([1.2, 1.2, 5, 2])
         
         csv_data = res_df.to_csv(index=False).encode('utf-8')
@@ -381,14 +381,10 @@ elif menu == "Sentiment Prediction":
             if input_text.strip():
                 res, emo, conf = get_prediction(input_text)
                 
-                # --- UPDATE LOCAL STATE STATISTIK ---
                 st.session_state.single_stats["total"] += 1
-                if res == "Positif":
-                    st.session_state.single_stats["positif"] += 1
-                elif res == "Negatif":
-                    st.session_state.single_stats["negatif"] += 1
-                elif res == "Netral":
-                    st.session_state.single_stats["netral"] += 1
+                if res == "Positif": st.session_state.single_stats["positif"] += 1
+                elif res == "Negatif": st.session_state.single_stats["negatif"] += 1
+                elif res == "Netral": st.session_state.single_stats["netral"] += 1
                 
                 st.divider()
                 st.markdown(f"### Hasil: {res} {emo}")
