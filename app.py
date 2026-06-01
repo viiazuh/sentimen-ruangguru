@@ -128,6 +128,7 @@ def load_sentiment_model():
         model_path = os.path.join(BASE_DIR, 'models', 'model_final.h5')
         pkl_path = os.path.join(BASE_DIR, 'models', 'pipeline_s12_raw.pkl')
         
+
         with open(pkl_path, 'rb') as f:
             pipeline = pickle.load(f)
             
