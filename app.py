@@ -126,47 +126,28 @@ if 'single_stats' not in st.session_state:
     st.session_state.single_stats = {"total": 0, "positif": 0, "negatif": 0, "netral": 0}
 
 # --- MODEL LOADING ---
-@st.cache_resource
+@@st.cache_resource
 def load_sentiment_model():
     try:
         import os
-        import traceback
 
-        st.write("Current Directory:", os.getcwd())
-
-        st.write("Isi Root Folder:")
-        st.write(os.listdir("."))
-
-        if os.path.exists("models"):
-            st.write("Isi Folder models:")
-            st.write(os.listdir("models"))
-        else:
-            st.error("Folder models tidak ditemukan!")
-
-        st.write(
-            "model_final.h5 ada?",
-            os.path.exists("models/model_final.h5")
-        )
-
-        st.write(
-            "pipeline_s12_raw.pkl ada?",
-            os.path.exists("models/pipeline_s12_raw.pkl")
-        )
+        st.write("Model ditemukan:", os.path.exists("models/model_final.h5"))
+        st.write("Pipeline ditemukan:", os.path.exists("models/pipeline_s12_raw.pkl"))
 
         model = tf.keras.models.load_model(
-            "models/model_final.h5"
+            "models/model_final.h5",
+            compile=False
         )
 
         pipeline = joblib.load(
             "models/pipeline_s12_raw.pkl"
         )
 
-        st.success("Model berhasil dimuat!")
-
+        st.success("Model berhasil dimuat")
         return model, pipeline
 
-    except Exception:
-        st.error(traceback.format_exc())
+    except Exception as e:
+        st.error(f"ERROR MODEL: {str(e)}")
         return None, None
 
 model_ml, pipeline_ml = load_sentiment_model()
