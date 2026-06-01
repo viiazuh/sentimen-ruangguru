@@ -152,6 +152,10 @@ model_ml, pipeline_ml = load_sentiment_model()
 # --- HELPER: EKSTRAKSI SEQUENCE SECARA FLEKSIBEL DARI OBJEK FERDINAN ---
 def extract_sequences(pipeline, texts_list):
     """Membongkar objek KerasPredictor / Tokenizer secara dinamis"""
+    # DEBUG UTAMA: Munculkan semua isi daleman objek ke layar biar kita tahu nama variabelnya!
+    st.warning("⚠️ **DEBUG MODE — Struktur Atribut Object Pipeline:**")
+    st.code(str(dir(pipeline)))
+    
     if hasattr(pipeline, 'texts_to_sequences'):
         return pipeline.texts_to_sequences(texts_list)
     elif hasattr(pipeline, 'tokenizer') and pipeline.tokenizer and hasattr(pipeline.tokenizer, 'texts_to_sequences'):
@@ -159,13 +163,12 @@ def extract_sequences(pipeline, texts_list):
     elif hasattr(pipeline, 'named_steps') and 'tokenizer' in pipeline.named_steps:
         return pipeline.named_steps['tokenizer'].texts_to_sequences(texts_list)
     
-    # Taktik pamungkas: Scan otomatis seluruh atribut di dalam objek
+    # Scan otomatis seluruh atribut di dalam objek
     for attr in dir(pipeline):
         obj = getattr(pipeline, attr)
         if hasattr(obj, 'texts_to_sequences'):
             return obj.texts_to_sequences(texts_list)
             
-    # Jika objek mengembalikan string lewat transform, jalankan ulang pencarian token
     if hasattr(pipeline, 'transform'):
         try:
             transformed = pipeline.transform(texts_list)
@@ -326,7 +329,6 @@ elif menu == "Data Management":
                 texts = df_view[text_col].astype(str).tolist()
                 prog = st.progress(0)
                 
-                # Menggunakan fungsi ekstraksi dinamis agar batch data aman
                 seqs = extract_sequences(pipeline_ml, [t.lower() for t in texts])
                 prog.progress(0.5)
                 
