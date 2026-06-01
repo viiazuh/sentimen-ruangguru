@@ -133,17 +133,13 @@ def load_sentiment_model():
         model_path = os.path.join(BASE_DIR, 'models', 'model_final.h5')
         pkl_path = os.path.join(BASE_DIR, 'models', 'pipeline_s12_raw.pkl')
         
-        # Indikator pengecekan file fisik di server
         st.sidebar.info(f"Model ditemukan: {os.path.exists(model_path)}")
         st.sidebar.info(f"Pipeline ditemukan: {os.path.exists(pkl_path)}")
         
-        # FIX: Gunakan pickle.load murni untuk membaca objek Keras Tokenizer dari Ferdinan
         with open(pkl_path, 'rb') as f:
             pipeline = pickle.load(f)
             
-        # 2. Muat Model h5 Deep Learning menggunakan TensorFlow
         model = tf.keras.models.load_model(model_path)
-        
         return model, pipeline
     except Exception as e:
         st.sidebar.error(f"Gagal memuat model/pipeline: {e}")
@@ -153,20 +149,48 @@ def load_sentiment_model():
 
 model_ml, pipeline_ml = load_sentiment_model()
 
+# --- HELPER: EKSTRAKSI SEQUENCE SECARA FLEKSIBEL DARI OBJEK FERDINAN ---
+def extract_sequences(pipeline, texts_list):
+    """Membongkar objek KerasPredictor / Tokenizer secara dinamis"""
+    if hasattr(pipeline, 'texts_to_sequences'):
+        return pipeline.texts_to_sequences(texts_list)
+    elif hasattr(pipeline, 'tokenizer') and pipeline.tokenizer and hasattr(pipeline.tokenizer, 'texts_to_sequences'):
+        return pipeline.tokenizer.texts_to_sequences(texts_list)
+    elif hasattr(pipeline, 'named_steps') and 'tokenizer' in pipeline.named_steps:
+        return pipeline.named_steps['tokenizer'].texts_to_sequences(texts_list)
+    
+    # Taktik pamungkas: Scan otomatis seluruh atribut di dalam objek
+    for attr in dir(pipeline):
+        obj = getattr(pipeline, attr)
+        if hasattr(obj, 'texts_to_sequences'):
+            return obj.texts_to_sequences(texts_list)
+            
+    # Jika objek mengembalikan string lewat transform, jalankan ulang pencarian token
+    if hasattr(pipeline, 'transform'):
+        try:
+            transformed = pipeline.transform(texts_list)
+            if isinstance(transformed, list) and len(transformed) > 0 and isinstance(transformed[0], (int, np.integer)):
+                return [transformed]
+            for attr in dir(pipeline):
+                obj = getattr(pipeline, attr)
+                if hasattr(obj, 'texts_to_sequences'):
+                    return obj.texts_to_sequences(transformed)
+        except:
+            pass
+            
+    return None
+
 def get_prediction(text):
     if model_ml and pipeline_ml:
         try:
-            # Menguji fleksibilitas method objek pipeline biner Ferdinan
-            if hasattr(pipeline_ml, 'texts_to_sequences'):
-                seq = pipeline_ml.texts_to_sequences([text])
-            elif hasattr(pipeline_ml, 'transform'):
-                seq = pipeline_ml.transform([text])
-                if isinstance(seq, list) and isinstance(seq[0], str):
-                    if hasattr(pipeline_ml, 'tokenizer') and pipeline_ml.tokenizer:
-                        seq = pipeline_ml.tokenizer.texts_to_sequences(seq)
-                    elif hasattr(pipeline_ml, 'named_steps') and 'tokenizer' in pipeline_ml.named_steps:
-                        seq = pipeline_ml.named_steps['tokenizer'].texts_to_sequences(seq)
+            # Preprocessing teks manual dasar
+            clean_text = text.lower()
+            clean_text = re.sub(r'[^\w\s]', '', clean_text)
             
+            seq = extract_sequences(pipeline_ml, [clean_text])
+            if seq is None:
+                return "Error: Struktur Tokenizer tidak cocok", "⚠️", 0
+                
             padded = tf.keras.preprocessing.sequence.pad_sequences(seq, maxlen=100, padding='post')
             prediction = model_ml.predict(padded, verbose=0)
             
@@ -302,32 +326,28 @@ elif menu == "Data Management":
                 texts = df_view[text_col].astype(str).tolist()
                 prog = st.progress(0)
                 
-                if hasattr(pipeline_ml, 'texts_to_sequences'):
-                    seqs = pipeline_ml.texts_to_sequences(texts)
-                elif hasattr(pipeline_ml, 'transform'):
-                    seqs = pipeline_ml.transform(texts)
-                    if isinstance(seqs, list) and len(seqs) > 0 and isinstance(seqs[0], str):
-                        if hasattr(pipeline_ml, 'tokenizer') and pipeline_ml.tokenizer:
-                            seqs = pipeline_ml.tokenizer.texts_to_sequences(seqs)
-                        elif hasattr(pipeline_ml, 'named_steps') and 'tokenizer' in pipeline_ml.named_steps:
-                            seqs = pipeline_ml.named_steps['tokenizer'].texts_to_sequences(seqs)
+                # Menggunakan fungsi ekstraksi dinamis agar batch data aman
+                seqs = extract_sequences(pipeline_ml, [t.lower() for t in texts])
                 prog.progress(0.5)
                 
-                padded = tf.keras.preprocessing.sequence.pad_sequences(seqs, maxlen=100, padding='post')
-                preds = model_ml.predict(padded, batch_size=512, verbose=0)
-                prog.progress(1.0)
-                
-                labels = ["Netral", "Negatif", "Positif"]
-                res_list = [labels[np.argmax(p)] for p in preds]
-                conf_list = [int(np.max(p)*100) for p in preds]
-                
-                st.session_state.dataset = pd.DataFrame({
-                    "Text Asli": texts, 
-                    "Sentimen": res_list,
-                    "Probabilitas(%)": conf_list
-                })
-                st.session_state.page = 0 
-                st.session_state.page_dashboard = 0
+                if seqs is None:
+                    st.error("Gagal melakukan tokenisasi data massal. Struktur pipeline tidak cocok.")
+                else:
+                    padded = tf.keras.preprocessing.sequence.pad_sequences(seqs, maxlen=100, padding='post')
+                    preds = model_ml.predict(padded, batch_size=512, verbose=0)
+                    prog.progress(1.0)
+                    
+                    labels = ["Netral", "Negatif", "Positif"]
+                    res_list = [labels[np.argmax(p)] for p in preds]
+                    conf_list = [int(np.max(p)*100) for p in preds]
+                    
+                    st.session_state.dataset = pd.DataFrame({
+                        "Text Asli": texts, 
+                        "Sentimen": res_list,
+                        "Probabilitas(%)": conf_list
+                    })
+                    st.session_state.page = 0 
+                    st.session_state.page_dashboard = 0
 
     if st.session_state.dataset is not None:
         st.divider()
