@@ -98,26 +98,17 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# DEFINISI CLASS OLEH FERDINAN: Wajib ada di __main__ agar pkl tidak error
+# DEFINISI CLASS OLEH FERDINAN: Bypass struktur untuk load file PKL
 # =========================================================================
 class TextPreprocessor:
-    def __init__(self, *args, **kwargs):
-        pass
-    def transform(self, text):
-        if isinstance(text, str):
-            text = text.lower()
-            text = re.sub(r'[^\w\s]', '', text)
-        return text
-    def fit(self, X, y=None):
-        return self
+    def __init__(self, *args, **kwargs): pass
+    def transform(self, text): return text
+    def fit(self, X, y=None): return self
 
 class KerasPredictor:
-    def __init__(self, *args, **kwargs):
-        pass
-    def transform(self, text):
-        return text
-    def fit(self, X, y=None):
-        return self
+    def __init__(self, *args, **kwargs): pass
+    def transform(self, text): return text
+    def fit(self, X, y=None): return self
 
 # --- SESSION STATE INITIALIZATION ---
 if 'dataset' not in st.session_state: st.session_state.dataset = None
@@ -137,75 +128,64 @@ def load_sentiment_model():
         model_path = os.path.join(BASE_DIR, 'models', 'model_final.h5')
         pkl_path = os.path.join(BASE_DIR, 'models', 'pipeline_s12_raw.pkl')
         
-        st.sidebar.info(f"Model ditemukan: {os.path.exists(model_path)}")
-        st.sidebar.info(f"Pipeline ditemukan: {os.path.exists(pkl_path)}")
-        
+        # Info Sidebar sudah dihapus total agar tidak mengganggu UI
         with open(pkl_path, 'rb') as f:
             pipeline = pickle.load(f)
             
         model = tf.keras.models.load_model(model_path)
         return model, pipeline
     except Exception as e:
-        st.sidebar.error(f"Gagal memuat model/pipeline: {e}")
-        import traceback
-        st.sidebar.text(traceback.format_exc())
+        st.error(f"Gagal memuat model/pipeline: {e}")
         return None, None
 
 model_ml, pipeline_ml = load_sentiment_model()
 
-# --- HELPER: AUTO-DEBUGGER TRANSFORM SCIKIT-LEARN ---
-def extract_sequences(pipeline, texts_list):
-    """Mengeksekusi transformasi biner dari Scikit-Learn Pipeline Ferdinan dengan Auto-Debugger"""
-    try:
-        # Tampilkan nama anak tangga pipeline di layar secara transparan
-        st.info(f"📋 **Daftar Steps Pipeline:** {list(pipeline.named_steps.keys())}")
-        
-        # Coba eksekusi menggunakan format Pandas Series (banyak pipeline scikit-learn mewajibkan format ini)
-        try:
-            transformed = pipeline.transform(pd.Series(texts_list))
-        except:
-            # Jika gagal, gunakan list mentah biasa
-            transformed = pipeline.transform(texts_list)
+# --- HELPER: PENCARI TOKENIZER OTOMATIS (DEEP RECURSIVE SEARCH) ---
+def find_keras_tokenizer(obj, depth=0):
+    """Mencari Keras Tokenizer sampai ke akar-akar objek Ferdinan"""
+    if depth > 5: return None
+    if hasattr(obj, 'texts_to_sequences'): return obj
+    
+    if hasattr(obj, '__dict__'):
+        for k, v in obj.__dict__.items():
+            if k.startswith('__'): continue
+            res = find_keras_tokenizer(v, depth+1)
+            if res: return res
             
-        if hasattr(transformed, 'toarray'):
-            transformed = transformed.toarray()
-        return transformed
-        
-    except Exception as main_error:
-        st.error(f"💥 **Pipeline Utama Macet:** {main_error}")
-        st.warning("🔄 *Mengeksekusi langkah per langkah secara manual untuk mencari titik masalah...*")
-        
-        # PROSES AUTO-DEBUGGER LANJUTAN: Jalankan anak tangga satu per satu
-        try:
-            current_data = pd.Series(texts_list)
-            for name, step in pipeline.steps:
-                st.write(f"🔹 Menjalankan step: `{name}` ...")
-                
-                # Khusus jika step pengeksekusi adalah model KerasPredictor kosongan, bypass langsung
-                if step.__class__.__name__ == 'KerasPredictor':
-                    st.write(f"➡️ Step `{name}` dilewati (Bypass KerasPredictor)")
-                    continue
-                    
-                current_data = step.transform(current_data)
-            return current_data
-        except Exception as step_error:
-            st.error(f"❌ **Eror Terjadi di Step:** `{name}`")
-            st.code(f"Pesan Eror: {step_error}")
-            return None
+    if isinstance(obj, (list, tuple)):
+        for item in obj:
+            res = find_keras_tokenizer(item, depth+1)
+            if res: return res
+            
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            res = find_keras_tokenizer(v, depth+1)
+            if res: return res
+            
+    return None
+
+def extract_sequences(pipeline, texts_list):
+    """Mengekstraksi token secara aman tanpa validasi Estimator"""
+    # 1. Bersihkan teks manual (karena TextPreprocessor di-bypass)
+    clean_texts = [re.sub(r'[^\w\s]', '', str(t).lower()) for t in texts_list]
+    
+    # 2. Cari objek Tokenizer murni
+    tokenizer = find_keras_tokenizer(pipeline)
+    
+    # 3. Lakukan konversi teks ke urutan angka
+    if tokenizer:
+        seqs = tokenizer.texts_to_sequences(clean_texts)
+        # Jika hasil kosong (kata tidak dikenali), berikan array kosong agar tidak error
+        return seqs if seqs else [[0]]
+    return None
 
 def get_prediction(text):
     if model_ml and pipeline_ml:
         try:
-            # Jalankan ekstraksi sequence pintar
             seq = extract_sequences(pipeline_ml, [text])
             if seq is None:
-                return "Error: Gagal konversi teks ke angka", "⚠️", 0
+                return "Error: Tokenizer asli Keras tidak ditemukan di file pkl", "⚠️", 0
                 
-            # Konversi output ke bentuk array numpy jika diperlukan
-            if hasattr(seq, 'toarray'):
-                seq = seq.toarray()
-            seq = np.array(seq)
-            
             padded = tf.keras.preprocessing.sequence.pad_sequences(seq, maxlen=100, padding='post')
             prediction = model_ml.predict(padded, verbose=0)
             
@@ -345,9 +325,8 @@ elif menu == "Data Management":
                 prog.progress(0.5)
                 
                 if seqs is None:
-                    st.error("Gagal melakukan tokenisasi data massal. Struktur pipeline tidak cocok.")
+                    st.error("Gagal melakukan tokenisasi data massal. Tokenizer Keras tidak ditemukan.")
                 else:
-                    seqs = np.array(seqs)
                     padded = tf.keras.preprocessing.sequence.pad_sequences(seqs, maxlen=100, padding='post')
                     preds = model_ml.predict(padded, batch_size=512, verbose=0)
                     prog.progress(1.0)
@@ -424,6 +403,7 @@ elif menu == "Data Management":
 elif menu == "Sentiment Prediction":
     st.markdown("<h2>Sentiment Prediction</h2>", unsafe_allow_html=True)
     with st.container(border=True):
+        # PASTIKAN KAMU MENGETIK ULASAN ASLI DI SINI, BUKAN KODINGAN PYTHON YA 😂
         input_text = st.text_area("Masukkan teks ulasan", placeholder="Contoh: Keren banget!", height=150)
         
         if st.button("Analisis"):
@@ -432,7 +412,7 @@ elif menu == "Sentiment Prediction":
                 
                 st.session_state.single_stats["total"] += 1
                 if res == "Positif": st.session_state.single_stats["positif"] += 1
-                elif res == "Negatif": st.session_state.single_stats["negatif**"] += 1
+                elif res == "Negatif": st.session_state.single_stats["negatif"] += 1
                 elif res == "Netral": st.session_state.single_stats["netral"] += 1
                 
                 st.divider()
