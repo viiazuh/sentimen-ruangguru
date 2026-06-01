@@ -137,9 +137,9 @@ def load_sentiment_model():
         st.sidebar.info(f"Model ditemukan: {os.path.exists(model_path)}")
         st.sidebar.info(f"Pipeline ditemukan: {os.path.exists(pkl_path)}")
         
-        # 1. Muat Pipeline Keras Tokenizer dahulu menggunakan joblib
+        # FIX: Gunakan pickle.load murni untuk membaca objek Keras Tokenizer dari Ferdinan
         with open(pkl_path, 'rb') as f:
-            pipeline = joblib.load(f)
+            pipeline = pickle.load(f)
             
         # 2. Muat Model h5 Deep Learning menggunakan TensorFlow
         model = tf.keras.models.load_model(model_path)
@@ -147,7 +147,6 @@ def load_sentiment_model():
         return model, pipeline
     except Exception as e:
         st.sidebar.error(f"Gagal memuat model/pipeline: {e}")
-        # Cetak traceback penuh ke layar agar kita tahu persis file mana yang memicu error
         import traceback
         st.sidebar.text(traceback.format_exc())
         return None, None
