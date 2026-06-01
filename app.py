@@ -101,15 +101,12 @@ st.markdown("""
 # DEFINISI CLASS OLEH FERDINAN: Wajib ada di __main__ agar pkl tidak error
 # =========================================================================
 class TextPreprocessor:
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         pass
     def transform(self, text):
         if isinstance(text, str):
             text = text.lower()
             text = re.sub(r'[^\w\s]', '', text)
-        elif isinstance(text, list):
-            text = [str(t).lower() for t in text]
-            text = [re.sub(r'[^\w\s]', '', t) for t in text]
         return text
     def fit(self, X, y=None):
         return self
@@ -156,32 +153,59 @@ def load_sentiment_model():
 
 model_ml, pipeline_ml = load_sentiment_model()
 
-# --- HELPER: EKSTRAKSI UTAMA PIPELINE SCIKIT-LEARN ---
+# --- HELPER: AUTO-DEBUGGER TRANSFORM SCIKIT-LEARN ---
 def extract_sequences(pipeline, texts_list):
-    """Mengeksekusi transformasi biner dari Scikit-Learn Pipeline Ferdinan"""
+    """Mengeksekusi transformasi biner dari Scikit-Learn Pipeline Ferdinan dengan Auto-Debugger"""
     try:
-        # Jalankan transformasi pipeline utama milik Ferdinan
-        transformed = pipeline.transform(texts_list)
+        # Tampilkan nama anak tangga pipeline di layar secara transparan
+        st.info(f"📋 **Daftar Steps Pipeline:** {list(pipeline.named_steps.keys())}")
         
-        # Jika hasilnya sparse matrix (efek Tfidf/CountVectorizer), ubah jadi array biasa
+        # Coba eksekusi menggunakan format Pandas Series (banyak pipeline scikit-learn mewajibkan format ini)
+        try:
+            transformed = pipeline.transform(pd.Series(texts_list))
+        except:
+            # Jika gagal, gunakan list mentah biasa
+            transformed = pipeline.transform(texts_list)
+            
         if hasattr(transformed, 'toarray'):
             transformed = transformed.toarray()
-            
         return transformed
-    except Exception as e:
-        # Fallback cadangan: scan tokenizer internal jika transform utama mentok
-        if hasattr(pipeline, 'named_steps') and 'tokenizer' in pipeline.named_steps:
-            return pipeline.named_steps['tokenizer'].texts_to_sequences(texts_list)
-        return None
+        
+    except Exception as main_error:
+        st.error(f"💥 **Pipeline Utama Macet:** {main_error}")
+        st.warning("🔄 *Mengeksekusi langkah per langkah secara manual untuk mencari titik masalah...*")
+        
+        # PROSES AUTO-DEBUGGER LANJUTAN: Jalankan anak tangga satu per satu
+        try:
+            current_data = pd.Series(texts_list)
+            for name, step in pipeline.steps:
+                st.write(f"🔹 Menjalankan step: `{name}` ...")
+                
+                # Khusus jika step pengeksekusi adalah model KerasPredictor kosongan, bypass langsung
+                if step.__class__.__name__ == 'KerasPredictor':
+                    st.write(f"➡️ Step `{name}` dilewati (Bypass KerasPredictor)")
+                    continue
+                    
+                current_data = step.transform(current_data)
+            return current_data
+        except Exception as step_error:
+            st.error(f"❌ **Eror Terjadi di Step:** `{name}`")
+            st.code(f"Pesan Eror: {step_error}")
+            return None
 
 def get_prediction(text):
     if model_ml and pipeline_ml:
         try:
-            # Kirim teks langsung ke struktur ekstraksi sequence
+            # Jalankan ekstraksi sequence pintar
             seq = extract_sequences(pipeline_ml, [text])
             if seq is None:
                 return "Error: Gagal konversi teks ke angka", "⚠️", 0
                 
+            # Konversi output ke bentuk array numpy jika diperlukan
+            if hasattr(seq, 'toarray'):
+                seq = seq.toarray()
+            seq = np.array(seq)
+            
             padded = tf.keras.preprocessing.sequence.pad_sequences(seq, maxlen=100, padding='post')
             prediction = model_ml.predict(padded, verbose=0)
             
@@ -323,6 +347,7 @@ elif menu == "Data Management":
                 if seqs is None:
                     st.error("Gagal melakukan tokenisasi data massal. Struktur pipeline tidak cocok.")
                 else:
+                    seqs = np.array(seqs)
                     padded = tf.keras.preprocessing.sequence.pad_sequences(seqs, maxlen=100, padding='post')
                     preds = model_ml.predict(padded, batch_size=512, verbose=0)
                     prog.progress(1.0)
@@ -407,7 +432,7 @@ elif menu == "Sentiment Prediction":
                 
                 st.session_state.single_stats["total"] += 1
                 if res == "Positif": st.session_state.single_stats["positif"] += 1
-                elif res == "Negatif": st.session_state.single_stats["negatif"] += 1
+                elif res == "Negatif": st.session_state.single_stats["negatif**"] += 1
                 elif res == "Netral": st.session_state.single_stats["netral"] += 1
                 
                 st.divider()
