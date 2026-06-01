@@ -115,7 +115,7 @@ def load_sentiment_model():
         model = tf.keras.models.load_model('models/best_model_S1_&_S2_tanpa_SMOTE.h5')
         with open('models/tokenizer.pkl', 'rb') as f:
             tokenizer = pickle.load(f)
-        with open('models/normalization_dicts.pkl', 'rb') as f:
+        with open('models/pipeline_s12_raw.pkl', 'rb') as f:
             norm_dict = pickle.load(f)
         return model, tokenizer, norm_dict
     except Exception as e:
