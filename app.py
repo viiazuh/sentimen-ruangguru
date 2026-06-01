@@ -128,7 +128,6 @@ def load_sentiment_model():
         model_path = os.path.join(BASE_DIR, 'models', 'model_final.h5')
         pkl_path = os.path.join(BASE_DIR, 'models', 'pipeline_s12_raw.pkl')
         
-        # Info Sidebar sudah dihapus total agar tidak mengganggu UI
         with open(pkl_path, 'rb') as f:
             pipeline = pickle.load(f)
             
@@ -403,7 +402,6 @@ elif menu == "Data Management":
 elif menu == "Sentiment Prediction":
     st.markdown("<h2>Sentiment Prediction</h2>", unsafe_allow_html=True)
     with st.container(border=True):
-        # PASTIKAN KAMU MENGETIK ULASAN ASLI DI SINI, BUKAN KODINGAN PYTHON YA 😂
         input_text = st.text_area("Masukkan teks ulasan", placeholder="Contoh: Keren banget!", height=150)
         
         if st.button("Analisis"):
