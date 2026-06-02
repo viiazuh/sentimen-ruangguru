@@ -98,18 +98,24 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# DEFINISI CLASS OLEH FERDINAN: Bypass struktur untuk load file PKL
+# DEFINISI  struktur untuk load file PKL agar pkl tidak error
 # =========================================================================
 class TextPreprocessor:
-    def __init__(self, *args, **kwargs): pass
-    def transform(self, text): return text
-    def fit(self, X, y=None): return self
+    def __init__(self, *args, **kwargs):
+        pass
+    def transform(self, text):
+        return text
+    def fit(self, X, y=None):
+        return self
 
 class KerasPredictor:
-    def __init__(self, *args, **kwargs): pass
-    def transform(self, text): return text
-    def fit(self, X, y=None): return self
-
+    def __init__(self, *args, **kwargs):
+        pass
+    def transform(self, text):
+        return text
+    def fit(self, X, y=None):
+        return self
+    
 # --- SESSION STATE INITIALIZATION ---
 if 'dataset' not in st.session_state: st.session_state.dataset = None
 if 'uploaded_df' not in st.session_state: st.session_state.uploaded_df = None
