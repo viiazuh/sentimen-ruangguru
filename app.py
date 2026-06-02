@@ -126,6 +126,10 @@ if 'page_dashboard' not in st.session_state: st.session_state.page_dashboard = 0
 if 'single_stats' not in st.session_state:
     st.session_state.single_stats = {"total": 0, "positif": 0, "negatif": 0, "netral": 0}
 
+# Buffer penyimpanan sementara ulasan sesi aktif
+if 'prediction_history' not in st.session_state:
+    st.session_state.prediction_history = []
+
 # --- MODEL LOADING ---
 @st.cache_resource
 def load_sentiment_model():
@@ -172,16 +176,11 @@ def find_keras_tokenizer(obj, depth=0):
 
 def extract_sequences(pipeline, texts_list):
     """Mengekstraksi token secara aman tanpa validasi Estimator"""
-    # 1. Bersihkan teks manual (karena TextPreprocessor di-bypass)
     clean_texts = [re.sub(r'[^\w\s]', '', str(t).lower()) for t in texts_list]
-    
-    # 2. Cari objek Tokenizer murni
     tokenizer = find_keras_tokenizer(pipeline)
     
-    # 3. Lakukan konversi teks ke urutan angka
     if tokenizer:
         seqs = tokenizer.texts_to_sequences(clean_texts)
-        # Jika hasil kosong (kata tidak dikenali), berikan array kosong agar tidak error
         return seqs if seqs else [[0]]
     return None
 
@@ -241,8 +240,19 @@ if menu == "Dashboard":
             fig_pie_rt = px.pie(df_rt, names="Sentimen", values="Jumlah Data", color="Sentimen", color_discrete_map=COLOR_MAP, hole=0.3)
             fig_pie_rt.update_layout(margin=dict(l=0, r=0, t=20, b=0))
             st.plotly_chart(fig_pie_rt, use_container_width=True)
+            
+        # PENGGANTIAN NAMA UTAMA DI SINI (BUKAN RIWAYAT)
+        st.markdown("<div style='font-size:16px; font-weight:600; margin-top:20px; margin-bottom:10px;'>Daftar Hasil Pengujian Sesi Aktif</div>", unsafe_allow_html=True)
+        df_history = pd.DataFrame(reversed(st.session_state.prediction_history))
+        st.dataframe(df_history, use_container_width=True)
+        
+        if st.button("🗑️ Kosongkan Tabel Sesi Aktif"):
+            st.session_state.prediction_history = []
+            st.session_state.single_stats = {"total": 0, "positif": 0, "negatif": 0, "netral": 0}
+            st.rerun()
+            
     else:
-        st.info("Belum ada data grafik ulasan tunggal pada sesi ini.")
+        st.info("Belum ada data grafik maupun daftar pengujian tunggal pada sesi ini.")
 
     if st.session_state.dataset is not None:
         st.divider()
@@ -278,7 +288,7 @@ if menu == "Dashboard":
             fig_pie_batch.update_layout(margin=dict(l=0, r=0, t=20, b=0))
             st.plotly_chart(fig_pie_batch, use_container_width=True)
             
-        st.markdown("<div style='font-size:16px; font-weight:600; margin-top:20px; margin-bottom:10px;'>Preview Hasil Analisis</div>", unsafe_allow_html=True)
+        st.markdown("<div style='font-size:16px; font-weight:600; margin-top:20px; margin-bottom:10px;'>Preview Hasil Analisis Massal</div>", unsafe_allow_html=True)
         
         items_per_page_db = 10
         total_pages_db = max(1, (batch_total + items_per_page_db - 1) // items_per_page_db)
@@ -378,13 +388,13 @@ elif menu == "Data Management":
         
         col_prev, col_info, col_next = st.columns([1, 4, 1])
         with col_prev:
-            st.button("Prev", key="btn_prev_dm",
+            st.button("Prev", key="btn_prev_down",
                       on_click=lambda: st.session_state.update(page=st.session_state.page - 1), 
                       disabled=(st.session_state.page == 0), use_container_width=True)
         with col_info:
             st.markdown(f"<div style='text-align: center; margin-top: 10px; font-weight: 500;'>Halaman {st.session_state.page + 1} dari {total_pages}</div>", unsafe_allow_html=True)
         with col_next:
-            st.button("Next", key="btn_next_dm",
+            st.button("Next", key="btn_next_down",
                       on_click=lambda: st.session_state.update(page=st.session_state.page + 1), 
                       disabled=(st.session_state.page >= total_pages - 1), use_container_width=True)
 
@@ -419,6 +429,13 @@ elif menu == "Sentiment Prediction":
                 if res == "Positif": st.session_state.single_stats["positif"] += 1
                 elif res == "Negatif": st.session_state.single_stats["negatif"] += 1
                 elif res == "Netral": st.session_state.single_stats["netral"] += 1
+                
+                # Menyimpan ulasan ke state lokal tanpa embel-embel riwayat database
+                st.session_state.prediction_history.append({
+                    "Teks Ulasan": input_text,
+                    "Hasil Klasifikasi": f"{res} {emo}",
+                    "Tingkat Keyakinan": f"{conf}%"
+                })
                 
                 st.divider()
                 st.markdown(f"### Hasil: {res} {emo}")
