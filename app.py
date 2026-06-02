@@ -241,15 +241,9 @@ if menu == "Dashboard":
             fig_pie_rt.update_layout(margin=dict(l=0, r=0, t=20, b=0))
             st.plotly_chart(fig_pie_rt, use_container_width=True)
             
-        # PENGGANTIAN NAMA UTAMA DI SINI (BUKAN RIWAYAT)
         st.markdown("<div style='font-size:16px; font-weight:600; margin-top:20px; margin-bottom:10px;'>Daftar Hasil Pengujian Sesi Aktif</div>", unsafe_allow_html=True)
         df_history = pd.DataFrame(reversed(st.session_state.prediction_history))
         st.dataframe(df_history, use_container_width=True)
-        
-        if st.button("🗑️ Kosongkan Tabel Sesi Aktif"):
-            st.session_state.prediction_history = []
-            st.session_state.single_stats = {"total": 0, "positif": 0, "negatif": 0, "netral": 0}
-            st.rerun()
             
     else:
         st.info("Belum ada data grafik maupun daftar pengujian tunggal pada sesi ini.")
