@@ -223,7 +223,11 @@ if menu == "Dashboard":
         </div>
     """, unsafe_allow_html=True)
 
+<<<<<<< HEAD
     st.markdown("<h4>Matriks Performa Model(Confusion Matrix)</h4>", unsafe_allow_html=True)
+=======
+    st.markdown("<h4>Matriks Kebingungan (Confusion Matrix)</h4>", unsafe_allow_html=True)
+>>>>>>> 3939f0c688166a94815c4b22a91b1ea364c971b6
     
     # Data statis simulasi Akurasi 97%
     z = [[950, 15, 5],   # Aktual Positif
@@ -481,4 +485,8 @@ elif menu == "Sentiment Prediction":
                 ))
                 
                 fig_gauge.update_layout(height=350, margin=dict(l=10, r=10, t=50, b=10))
+<<<<<<< HEAD
                 st.plotly_chart(fig_gauge, use_container_width=True)
+=======
+                st.plotly_chart(fig_gauge, use_container_width=True)
+>>>>>>> 3939f0c688166a94815c4b22a91b1ea364c971b6
