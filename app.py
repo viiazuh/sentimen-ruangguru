@@ -126,11 +126,10 @@ if 'page_dashboard' not in st.session_state: st.session_state.page_dashboard = 0
 if 'single_stats' not in st.session_state:
     st.session_state.single_stats = {"total": 0, "positif": 0, "negatif": 0, "netral": 0}
 
-# Buffer penyimpanan sementara ulasan sesi aktif
+
 if 'prediction_history' not in st.session_state:
     st.session_state.prediction_history = []
 
-# --- MODEL LOADING ---
 @st.cache_resource
 def load_sentiment_model():
     try:
@@ -150,7 +149,7 @@ def load_sentiment_model():
 
 model_ml, pipeline_ml = load_sentiment_model()
 
-# --- HELPER: PENCARI TOKENIZER OTOMATIS (DEEP RECURSIVE SEARCH) ---
+# --- HELPER: PENCARI TOKENIZER OTOMATIS  ---
 def find_keras_tokenizer(obj, depth=0):
     """Mencari Keras Tokenizer sampai ke akar-akar objek Ferdinan"""
     if depth > 5: return None
