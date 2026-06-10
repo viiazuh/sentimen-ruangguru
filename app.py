@@ -223,7 +223,7 @@ if menu == "Dashboard":
         </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("<h4>Matriks Kebingungan (Confusion Matrix)</h4>", unsafe_allow_html=True)
+    st.markdown("<h4>Matriks Performa Model(Confusion Matrix)</h4>", unsafe_allow_html=True)
     
     # Data statis simulasi Akurasi 97%
     z = [[950, 15, 5],   # Aktual Positif
