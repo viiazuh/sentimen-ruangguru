@@ -188,17 +188,18 @@ def get_prediction(text):
     if model_ml and pipeline_ml:
         try:
             seq = extract_sequences(pipeline_ml, [text])
-            if seq is None:
-                return "Error: Tokenizer asli Keras tidak ditemukan di file pkl", "⚠️", 0
-                
-            padded = tf.keras.preprocessing.sequence.pad_sequences(seq, maxlen=100, padding='post')
+            if seq is None: return "Error Tokenizer", "⚠️", 0
+            
+            # PERBAIKAN 1: maxlen jadi 32 & truncating='post' sesuai Colab
+            padded = tf.keras.preprocessing.sequence.pad_sequences(seq, maxlen=32, padding='post', truncating='post')
             prediction = model_ml.predict(padded, verbose=0)
             
             labels, emojis = ["Negatif", "Netral", "Positif"], ["😞", "😐", "😀"]
             idx = np.argmax(prediction)
+            
             return labels[idx], emojis[idx], int(np.max(prediction) * 100)
         except Exception as e:
-            return f"Error Proses: {e}", "⚠️", 0
+            return f"Error: {e}", "⚠️", 0
     return "Error Model", "⚠️", 0
 
 # --- PENGATURAN WARNA GRAFIK ---
@@ -366,12 +367,13 @@ elif menu == "Data Management":
                 prog.progress(0.5)
                 
                 if seqs is None:
-                    st.error("Gagal melakukan tokenisasi data massal. Tokenizer Keras tidak ditemukan.")
+                    st.error("Gagal melakukan tokenisasi. Tokenizer asli Keras tidak ditemukan.")
                 else:
-                    padded = tf.keras.preprocessing.sequence.pad_sequences(seqs, maxlen=100, padding='post')
+                  
+                    padded = tf.keras.preprocessing.sequence.pad_sequences(seqs, maxlen=32, padding='post', truncating='post')
                     preds = model_ml.predict(padded, batch_size=512, verbose=0)
-                    prog.progress(1.0)
                     
+                    # PERBAIKAN 2: Urutan disesuaikan (0: Negatif, 1: Netral, 2: Positif)
                     labels = ["Negatif", "Netral", "Positif"]
                     res_list = [labels[np.argmax(p)] for p in preds]
                     conf_list = [int(np.max(p)*100) for p in preds]
