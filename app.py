@@ -194,7 +194,7 @@ def get_prediction(text):
             padded = tf.keras.preprocessing.sequence.pad_sequences(seq, maxlen=100, padding='post')
             prediction = model_ml.predict(padded, verbose=0)
             
-            labels, emojis = ["Netral", "Negatif", "Positif"], ["😐", "😞", "😀"]
+            labels, emojis = ["Negatif", "Netral", "Positif"], ["😞", "😐", "😀"]
             idx = np.argmax(prediction)
             return labels[idx], emojis[idx], int(np.max(prediction) * 100)
         except Exception as e:
@@ -372,7 +372,7 @@ elif menu == "Data Management":
                     preds = model_ml.predict(padded, batch_size=512, verbose=0)
                     prog.progress(1.0)
                     
-                    labels = ["Netral", "Negatif", "Positif"]
+                    labels = ["Negatif", "Netral", "Positif"]
                     res_list = [labels[np.argmax(p)] for p in preds]
                     conf_list = [int(np.max(p)*100) for p in preds]
                     
@@ -469,7 +469,7 @@ elif menu == "Sentiment Prediction":
                 elif res == "Negatif": st.session_state.single_stats["negatif"] += 1
                 elif res == "Netral": st.session_state.single_stats["netral"] += 1
                 
-                # Menyimpan ulasan ke state lokal tanpa embel-embel riwayat database
+           
                 st.session_state.prediction_history.append({
                     "Teks Ulasan": input_text,
                     "Hasil Klasifikasi": f"{res} {emo}",
