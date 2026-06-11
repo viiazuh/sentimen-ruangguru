@@ -18,7 +18,7 @@ st.set_page_config(page_title="Sentiment Pro", page_icon="🙂", layout="wide")
 # --- CUSTOM CSS (PRESISI FIGMA & INTER FONT) ---
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght=400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     
     html, body, [class*="css"], .stApp { 
         font-family: 'Inter', sans-serif !important; 
@@ -66,7 +66,7 @@ st.markdown("""
         color: #000000 !important;
     }
 
-    /* METRIC CARD STYLING */
+    /* DASHBOARD & DATA MANAGEMENT METRIC CARD */
     .metric-card { 
         background-color: white; 
         padding: 20px; 
@@ -75,8 +75,8 @@ st.markdown("""
         border: 1px solid #f3f4f6; 
         margin-bottom: 1rem; 
     }
-    .metric-title { color: #6b7280; font-size: 1.1rem; font-weight: 600; text-transform: uppercase; }
-    .metric-value { color: #1f2937; font-size: 2.5rem; font-weight: 700; }
+    .metric-title { color: #6b7280; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; }
+    .metric-value { color: #1f2937; font-size: 1.75rem; font-weight: 700; }
 
     /* BUTTONS */
     .stButton>button { 
@@ -88,6 +88,7 @@ st.markdown("""
         width: 100%;
     }
     
+    /* Tombol Download Khusus agar lebih kecil/rapi */
     [data-testid="stDownloadButton"] > button {
         background: #ffffff !important;
         color: #1f2937 !important;
@@ -99,17 +100,23 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# DEFINISI STRUKTUR PIPELINE UNTUK MENCEGAH ERROR PKL
+# DEFINISI  struktur untuk load file PKL agar pkl tidak error
 # =========================================================================
 class TextPreprocessor:
-    def __init__(self, *args, **kwargs): pass
-    def transform(self, text): return text
-    def fit(self, X, y=None): return self
+    def __init__(self, *args, **kwargs):
+        pass
+    def transform(self, text):
+        return text
+    def fit(self, X, y=None):
+        return self
 
 class KerasPredictor:
-    def __init__(self, *args, **kwargs): pass
-    def transform(self, text): return text
-    def fit(self, X, y=None): return self
+    def __init__(self, *args, **kwargs):
+        pass
+    def transform(self, text):
+        return text
+    def fit(self, X, y=None):
+        return self
     
 # --- SESSION STATE INITIALIZATION ---
 if 'dataset' not in st.session_state: st.session_state.dataset = None
@@ -131,6 +138,7 @@ def load_sentiment_model():
         model_path = os.path.join(BASE_DIR, 'models', 'model_final.h5')
         pkl_path = os.path.join(BASE_DIR, 'models', 'pipeline_s12_raw.pkl')
         
+
         with open(pkl_path, 'rb') as f:
             pipeline = pickle.load(f)
             
@@ -142,28 +150,35 @@ def load_sentiment_model():
 
 model_ml, pipeline_ml = load_sentiment_model()
 
-# --- HELPER: PENCARI TOKENIZER ---
+# --- HELPER: PENCARI TOKENIZER OTOMATIS  ---
 def find_keras_tokenizer(obj, depth=0):
+    """Mencari Keras Tokenizer sampai ke akar-akar objek Ferdinan"""
     if depth > 5: return None
     if hasattr(obj, 'texts_to_sequences'): return obj
+    
     if hasattr(obj, '__dict__'):
         for k, v in obj.__dict__.items():
             if k.startswith('__'): continue
             res = find_keras_tokenizer(v, depth+1)
             if res: return res
+            
     if isinstance(obj, (list, tuple)):
         for item in obj:
             res = find_keras_tokenizer(item, depth+1)
             if res: return res
+            
     if isinstance(obj, dict):
         for k, v in obj.items():
             res = find_keras_tokenizer(v, depth+1)
             if res: return res
+            
     return None
 
 def extract_sequences(pipeline, texts_list):
+    """Mengekstraksi token secara aman tanpa validasi Estimator"""
     clean_texts = [re.sub(r'[^\w\s]', '', str(t).lower()) for t in texts_list]
     tokenizer = find_keras_tokenizer(pipeline)
+    
     if tokenizer:
         seqs = tokenizer.texts_to_sequences(clean_texts)
         return seqs if seqs else [[0]]
@@ -173,14 +188,17 @@ def get_prediction(text):
     if model_ml and pipeline_ml:
         try:
             seq = extract_sequences(pipeline_ml, [text])
-            if seq is None: return "Error Tokenizer", "⚠️", 0
+            if seq is None:
+                return "Error: Tokenizer asli Keras tidak ditemukan di file pkl", "⚠️", 0
+                
             padded = tf.keras.preprocessing.sequence.pad_sequences(seq, maxlen=100, padding='post')
             prediction = model_ml.predict(padded, verbose=0)
+            
             labels, emojis = ["Netral", "Negatif", "Positif"], ["😐", "😞", "😀"]
             idx = np.argmax(prediction)
             return labels[idx], emojis[idx], int(np.max(prediction) * 100)
         except Exception as e:
-            return f"Error: {e}", "⚠️", 0
+            return f"Error Proses: {e}", "⚠️", 0
     return "Error Model", "⚠️", 0
 
 # --- PENGATURAN WARNA GRAFIK ---
@@ -194,17 +212,52 @@ with st.sidebar:
 
 # --- DASHBOARD ---
 if menu == "Dashboard":
-    st.markdown("<h2>Dashboard Keseluruhan</h2>", unsafe_allow_html=True)
+    st.markdown("<h2>Dashboard</h2>", unsafe_allow_html=True)
+    
+    st.markdown("<h4>📊 Statistik Analisis Tunggal (Real-time Session)</h4>", unsafe_allow_html=True)
+    s = st.session_state.single_stats
+    
+    c1, c2, c3, c4 = st.columns(4)
+    with c1: st.markdown(f'<div class="metric-card"><div class="metric-title">Total Data</div><div class="metric-value">{s["total"]}</div></div>', unsafe_allow_html=True)
+    with c2: st.markdown(f'<div class="metric-card"><div class="metric-title">Positif 😊</div><div class="metric-value">{s["positif"]}</div></div>', unsafe_allow_html=True)
+    with c3: st.markdown(f'<div class="metric-card"><div class="metric-title">Negatif 😞</div><div class="metric-value">{s["negatif"]}</div></div>', unsafe_allow_html=True)
+    with c4: st.markdown(f'<div class="metric-card"><div class="metric-title">Netral 😐</div><div class="metric-value">{s["netral"]}</div></div>', unsafe_allow_html=True)
+    
+    st.markdown("<div style='font-size:16px; font-weight:600; margin-bottom:10px; margin-top:10px;'>Grafik Sentimen (Real-time Session)</div>", unsafe_allow_html=True)
+    if s["total"] > 0:
+        df_rt = pd.DataFrame({
+            "Sentimen": ["Positif", "Negatif", "Netral"],
+            "Jumlah Data": [s["positif"], s["negatif"], s["netral"]]
+        })
+        
+        col_bar_rt, col_pie_rt = st.columns(2)
+        with col_bar_rt:
+            fig_bar_rt = px.bar(df_rt, x="Sentimen", y="Jumlah Data", color="Sentimen", color_discrete_map=COLOR_MAP, text_auto=True)
+            fig_bar_rt.update_layout(showlegend=False, margin=dict(l=0, r=0, t=20, b=0), xaxis_title=None, yaxis_title=None)
+            st.plotly_chart(fig_bar_rt, use_container_width=True)
+            
+        with col_pie_rt:
+            fig_pie_rt = px.pie(df_rt, names="Sentimen", values="Jumlah Data", color="Sentimen", color_discrete_map=COLOR_MAP, hole=0.3)
+            fig_pie_rt.update_layout(margin=dict(l=0, r=0, t=20, b=0))
+            st.plotly_chart(fig_pie_rt, use_container_width=True)
+            
+        st.markdown("<div style='font-size:16px; font-weight:600; margin-top:20px; margin-bottom:10px;'>Daftar Hasil Pengujian Sesi Aktif</div>", unsafe_allow_html=True)
+        df_history = pd.DataFrame(reversed(st.session_state.prediction_history))
+        st.dataframe(df_history, use_container_width=True)
+            
+    else:
+        st.info("Belum ada data grafik maupun daftar pengujian tunggal pada sesi ini.")
+
     if st.session_state.dataset is not None:
+        st.divider()
         filename = st.session_state.uploaded_filename
         df_batch = st.session_state.dataset
-        
         batch_total = len(df_batch)
         batch_pos = len(df_batch[df_batch['Sentimen'] == "Positif"])
         batch_neg = len(df_batch[df_batch['Sentimen'] == "Negatif"])
         batch_net = len(df_batch[df_batch['Sentimen'] == "Netral"])
         
-        # 1. TAMPILKAN MATRIKS AKURASI DARI FILE YANG DIUPLOAD SECARA DINAMIS
+        # --- FITUR CONFUSION MATRIX DAN AKURASI ---
         if 'Label Asli' in df_batch.columns:
             correct_preds = (df_batch['Label Asli'] == df_batch['Sentimen']).sum()
             accuracy_val = (correct_preds / batch_total) * 100
@@ -219,8 +272,6 @@ if menu == "Dashboard":
             
             st.markdown("<h4>Confusion Matrix Hasil Analisis Massal</h4>", unsafe_allow_html=True)
             
-            # Membuat Crosstab Real-Time antara Label Asli vs Hasil Prediksi Model
-            # Memaksa urutan kategori agar rapi dan konsisten: Positif, Negatif, Netral
             categories = ['Positif', 'Negatif', 'Netral']
             df_batch['Label Asli'] = pd.Categorical(df_batch['Label Asli'], categories=categories)
             df_batch['Sentimen'] = pd.Categorical(df_batch['Sentimen'], categories=categories)
@@ -235,16 +286,17 @@ if menu == "Dashboard":
             fig_cm.update_layout(height=400, margin=dict(l=20, r=20, t=20, b=20), font=dict(size=14))
             st.plotly_chart(fig_cm, use_container_width=True)
             st.divider()
+        # --- AKHIR FITUR CONFUSION MATRIX ---
 
-        # 2. METRIK UTAMA DARI DATA MASSAL
         st.markdown(f"<h4>📁 Statistik Analisis Massal (File: {filename})</h4>", unsafe_allow_html=True)
+        
         b1, b2, b3, b4 = st.columns(4)
         with b1: st.markdown(f'<div class="metric-card"><div class="metric-title">Total Massal</div><div class="metric-value">{batch_total}</div></div>', unsafe_allow_html=True)
         with b2: st.markdown(f'<div class="metric-card"><div class="metric-title">Positif 😊</div><div class="metric-value">{batch_pos}</div></div>', unsafe_allow_html=True)
         with b3: st.markdown(f'<div class="metric-card"><div class="metric-title">Negatif 😞</div><div class="metric-value">{batch_neg}</div></div>', unsafe_allow_html=True)
         with b4: st.markdown(f'<div class="metric-card"><div class="metric-title">Netral 😐</div><div class="metric-value">{batch_net}</div></div>', unsafe_allow_html=True)
         
-        st.markdown("<div style='font-size:16px; font-weight:600; margin-bottom:10px;'>Grafik Distribusi Sentimen File Upload</div>", unsafe_allow_html=True)
+        st.markdown("<div style='font-size:16px; font-weight:600; margin-bottom:10px; margin-top:10px;'>Grafik Sentimen File Upload</div>", unsafe_allow_html=True)
         df_batch_chart = pd.DataFrame({
             "Sentimen": ["Positif", "Negatif", "Netral"],
             "Jumlah Data": [batch_pos, batch_neg, batch_net]
@@ -262,10 +314,13 @@ if menu == "Dashboard":
             st.plotly_chart(fig_pie_batch, use_container_width=True)
             
         st.markdown("<div style='font-size:16px; font-weight:600; margin-top:20px; margin-bottom:10px;'>Preview Hasil Analisis Massal</div>", unsafe_allow_html=True)
+        
         items_per_page_db = 10
         total_pages_db = max(1, (batch_total + items_per_page_db - 1) // items_per_page_db)
         
-        if st.session_state.page_dashboard >= total_pages_db: st.session_state.page_dashboard = total_pages_db - 1
+        if st.session_state.page_dashboard >= total_pages_db:
+            st.session_state.page_dashboard = total_pages_db - 1
+            
         start_idx_db = st.session_state.page_dashboard * items_per_page_db
         end_idx_db = start_idx_db + items_per_page_db
         
@@ -273,46 +328,21 @@ if menu == "Dashboard":
         
         col_prev_db, col_info_db, col_next_db = st.columns([1, 4, 1])
         with col_prev_db:
-            st.button("Prev", key="btn_prev_dash", on_click=lambda: st.session_state.update(page_dashboard=st.session_state.page_dashboard - 1), disabled=(st.session_state.page_dashboard == 0), use_container_width=True)
+            st.button("Prev", key="btn_prev_dash",
+                      on_click=lambda: st.session_state.update(page_dashboard=st.session_state.page_dashboard - 1), 
+                      disabled=(st.session_state.page_dashboard == 0), use_container_width=True)
         with col_info_db:
             st.markdown(f"<div style='text-align: center; margin-top: 10px; font-weight: 500;'>Halaman {st.session_state.page_dashboard + 1} dari {total_pages_db}</div>", unsafe_allow_html=True)
         with col_next_db:
-            st.button("Next", key="btn_next_dash", on_click=lambda: st.session_state.update(page_dashboard=st.session_state.page_dashboard + 1), disabled=(st.session_state.page_dashboard >= total_pages_db - 1), use_container_width=True)
-        st.divider()
-
-    # --- 3. BAGIAN STATISTIK REAL-TIME (PENGUJIAN TUNGGAL) ---
-    st.markdown("<h4>📊 Statistik Analisis Tunggal (Sesi Aktif)</h4>", unsafe_allow_html=True)
-    s = st.session_state.single_stats
-    
-    c1, c2, c3, c4 = st.columns(4)
-    with c1: st.markdown(f'<div class="metric-card"><div class="metric-title">Total Data</div><div class="metric-value">{s["total"]}</div></div>', unsafe_allow_html=True)
-    with c2: st.markdown(f'<div class="metric-card"><div class="metric-title">Positif 😊</div><div class="metric-value">{s["positif"]}</div></div>', unsafe_allow_html=True)
-    with c3: st.markdown(f'<div class="metric-card"><div class="metric-title">Negatif 😞</div><div class="metric-value">{s["negatif"]}</div></div>', unsafe_allow_html=True)
-    with c4: st.markdown(f'<div class="metric-card"><div class="metric-title">Netral 😐</div><div class="metric-value">{s["netral"]}</div></div>', unsafe_allow_html=True)
-    
-    if s["total"] > 0:
-        df_rt = pd.DataFrame({"Sentimen": ["Positif", "Negatif", "Netral"], "Jumlah Data": [s["positif"], s["negatif"], s["netral"]]})
-        col_bar_rt, col_pie_rt = st.columns(2)
-        with col_bar_rt:
-            fig_bar_rt = px.bar(df_rt, x="Sentimen", y="Jumlah Data", color="Sentimen", color_discrete_map=COLOR_MAP, text_auto=True)
-            fig_bar_rt.update_layout(showlegend=False, margin=dict(l=0, r=0, t=20, b=0), xaxis_title=None, yaxis_title=None)
-            st.plotly_chart(fig_bar_rt, use_container_width=True)
-        with col_pie_rt:
-            fig_pie_rt = px.pie(df_rt, names="Sentimen", values="Jumlah Data", color="Sentimen", color_discrete_map=COLOR_MAP, hole=0.3)
-            fig_pie_rt.update_layout(margin=dict(l=0, r=0, t=20, b=0))
-            st.plotly_chart(fig_pie_rt, use_container_width=True)
-            
-        st.markdown("<div style='font-size:16px; font-weight:600; margin-top:20px; margin-bottom:10px;'>Daftar Hasil Pengujian Sesi Aktif</div>", unsafe_allow_html=True)
-        st.dataframe(pd.DataFrame(reversed(st.session_state.prediction_history)), use_container_width=True)
-    else:
-        if st.session_state.dataset is None:
-            st.info("💡 Selamat Datang! Silakan lakukan prediksi tunggal di menu 'Sentiment Prediction' atau upload dataset berlabel di menu 'Data Management' untuk memunculkan Confusion Matrix.")
+            st.button("Next", key="btn_next_dash",
+                      on_click=lambda: st.session_state.update(page_dashboard=st.session_state.page_dashboard + 1), 
+                      disabled=(st.session_state.page_dashboard >= total_pages_db - 1), use_container_width=True)
 
 # --- DATA MANAGEMENT ---
 elif menu == "Data Management":
     st.markdown("<h2>Data Management</h2>", unsafe_allow_html=True)
     
-    uploaded_file = st.file_uploader("Upload dataset ulasan (Pastikan memiliki kolom Teks dan kolom Label Asli)", type=["csv", "xlsx"])
+    uploaded_file = st.file_uploader("Upload dataset ulasan", type=["csv", "xlsx"])
     if uploaded_file:
         if st.session_state.uploaded_filename != uploaded_file.name:
             st.session_state.uploaded_df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
@@ -323,62 +353,73 @@ elif menu == "Data Management":
 
     if st.session_state.uploaded_df is not None:
         df_view = st.session_state.uploaded_df
-        st.write(f"📁 **{st.session_state.uploaded_filename}** — {len(df_view)} baris terdeteksi.")
+        st.write(f"📁 **{st.session_state.uploaded_filename}** — {len(df_view)} baris")
         st.dataframe(df_view.head(5), use_container_width=True)
         
         if st.button("Jalankan Analisis Massal"):
-            with st.spinner("Model AI sedang menganalisis seluruh data massal..."):
-                # Cari kolom teks secara otomatis
-                text_col = next((c for c in ['text', 'ulasan', 'komentar', 'textDisplay', 'Teks'] if c in df_view.columns), df_view.columns[0])
+            with st.spinner("Menganalisis..."):
+                text_col = next((c for c in ['text', 'ulasan', 'komentar', 'textDisplay'] if c in df_view.columns), df_view.columns[0])
                 texts = df_view[text_col].astype(str).tolist()
+                prog = st.progress(0)
                 
-                # Ekstraksi sequence tokenisasi
                 seqs = extract_sequences(pipeline_ml, texts)
+                prog.progress(0.5)
                 
                 if seqs is None:
-                    st.error("Gagal melakukan tokenisasi. Tokenizer asli Keras tidak ditemukan.")
+                    st.error("Gagal melakukan tokenisasi data massal. Tokenizer Keras tidak ditemukan.")
                 else:
                     padded = tf.keras.preprocessing.sequence.pad_sequences(seqs, maxlen=100, padding='post')
                     preds = model_ml.predict(padded, batch_size=512, verbose=0)
+                    prog.progress(1.0)
                     
                     labels = ["Netral", "Negatif", "Positif"]
                     res_list = [labels[np.argmax(p)] for p in preds]
                     conf_list = [int(np.max(p)*100) for p in preds]
                     
+                    # --- FITUR DETEKSI LABEL ASLI UNTUK MATRIKS ---
                     data_result = {
                         "Text Asli": texts, 
                         "Sentimen": res_list,
                         "Probabilitas(%)": conf_list
                     }
                     
-                    # DETEKSI KOLOM LABEL ASLI DARI FILE YANG DIUPLOAD (Kunci Jawaban)
                     label_col = next((c for c in ['label', 'sentimen', 'sentiment', 'actual', 'Label Asli', 'sentimen_asli'] if c in df_view.columns), None)
                     if label_col:
-                        # Standardisasi nilai label agar seragam kapitalisasinya (Positif, Negatif, Netral)
                         raw_labels = df_view[label_col].astype(str).str.strip().str.capitalize()
                         data_result["Label Asli"] = raw_labels.values
                     else:
-                        # Jika dosen lupa buat nama kolom yang tepat, kita pasangkan kolom pertama selain teks sebagai asumsi label asli
                         potential_cols = [c for c in df_view.columns if c != text_col]
                         if potential_cols:
                             data_result["Label Asli"] = df_view[potential_cols[0]].astype(str).str.strip().str.capitalize().values
                     
                     st.session_state.dataset = pd.DataFrame(data_result)
+                    # --- AKHIR FITUR DETEKSI LABEL ---
+                    
                     st.session_state.page = 0 
                     st.session_state.page_dashboard = 0
-                    st.success("🎉 Analisis selesai! Silakan cek menu 'Dashboard' untuk melihat grafik Confusion Matrix hasil pengujian.")
 
     if st.session_state.dataset is not None:
         st.divider()
-        st.subheader("Tabel Hasil Klasifikasi Model AI")
+        st.subheader("Hasil Analisis")
         
         res_df = st.session_state.dataset
         total_n = len(res_df)
+        p_n = len(res_df[res_df['Sentimen'] == "Positif"])
+        neg_n = len(res_df[res_df['Sentimen'] == "Negatif"])
+        net_n = len(res_df[res_df['Sentimen'] == "Netral"])
+        
+        m1, m2, m3, m4 = st.columns(4)
+        with m1: st.markdown(f'<div class="metric-card"><div class="metric-title">Total</div><div class="metric-value">{total_n}</div></div>', unsafe_allow_html=True)
+        with m2: st.markdown(f'<div class="metric-card"><div class="metric-title">😊 Positif</div><div class="metric-value">{p_n}</div></div>', unsafe_allow_html=True)
+        with m3: st.markdown(f'<div class="metric-card"><div class="metric-title">😞 Negatif</div><div class="metric-value">{neg_n}</div></div>', unsafe_allow_html=True)
+        with m4: st.markdown(f'<div class="metric-card"><div class="metric-title">😐 Netral</div><div class="metric-value">{net_n}</div></div>', unsafe_allow_html=True)
         
         items_per_page = 10
         total_pages = max(1, (total_n + items_per_page - 1) // items_per_page)
-        if st.session_state.page >= total_pages: st.session_state.page = total_pages - 1
         
+        if st.session_state.page >= total_pages:
+            st.session_state.page = total_pages - 1
+            
         start_idx = st.session_state.page * items_per_page
         end_idx = start_idx + items_per_page
         
@@ -386,11 +427,15 @@ elif menu == "Data Management":
         
         col_prev, col_info, col_next = st.columns([1, 4, 1])
         with col_prev:
-            st.button("Prev", key="btn_prev_down", on_click=lambda: st.session_state.update(page=st.session_state.page - 1), disabled=(st.session_state.page == 0), use_container_width=True)
+            st.button("Prev", key="btn_prev_down",
+                      on_click=lambda: st.session_state.update(page=st.session_state.page - 1), 
+                      disabled=(st.session_state.page == 0), use_container_width=True)
         with col_info:
             st.markdown(f"<div style='text-align: center; margin-top: 10px; font-weight: 500;'>Halaman {st.session_state.page + 1} dari {total_pages}</div>", unsafe_allow_html=True)
         with col_next:
-            st.button("Next", key="btn_next_down", on_click=lambda: st.session_state.update(page=st.session_state.page + 1), disabled=(st.session_state.page >= total_pages - 1), use_container_width=True)
+            st.button("Next", key="btn_next_down",
+                      on_click=lambda: st.session_state.update(page=st.session_state.page + 1), 
+                      disabled=(st.session_state.page >= total_pages - 1), use_container_width=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
         col_csv, col_excel, col_spacer, col_del = st.columns([1.2, 1.2, 5, 2])
@@ -411,11 +456,11 @@ elif menu == "Data Management":
 
 # --- PREDICTION ---
 elif menu == "Sentiment Prediction":
-    st.markdown("<h2>Sentiment Prediction (Single Text)</h2>", unsafe_allow_html=True)
+    st.markdown("<h2>Sentiment Prediction</h2>", unsafe_allow_html=True)
     with st.container(border=True):
-        input_text = st.text_area("Masukkan teks ulasan mentah", placeholder="Contoh: Aplikasi Ruangguru sangat membantu belajar saya selama ujian!", height=150)
+        input_text = st.text_area("Masukkan teks ulasan", placeholder="Contoh: Seru banget!", height=150)
         
-        if st.button("Analisis Sentimen"):
+        if st.button("Analisis"):
             if input_text.strip():
                 res, emo, conf = get_prediction(input_text)
                 
@@ -424,6 +469,7 @@ elif menu == "Sentiment Prediction":
                 elif res == "Negatif": st.session_state.single_stats["negatif"] += 1
                 elif res == "Netral": st.session_state.single_stats["netral"] += 1
                 
+                # Menyimpan ulasan ke state lokal tanpa embel-embel riwayat database
                 st.session_state.prediction_history.append({
                     "Teks Ulasan": input_text,
                     "Hasil Klasifikasi": f"{res} {emo}",
@@ -431,26 +477,6 @@ elif menu == "Sentiment Prediction":
                 })
                 
                 st.divider()
-                st.markdown(f"<h3 style='text-align: center; font-size: 2rem;'>Hasil Analisis: {res} {emo}</h3>", unsafe_allow_html=True)
-                
-                # GAUGE CHART VISUALISASI PROBABILITAS
-                fig_gauge = go.Figure(go.Indicator(
-                    mode="gauge+number",
-                    value=conf,
-                    domain={'x': [0, 1], 'y': [0, 1]},
-                    title={'text': "Tingkat Keyakinan Prediksi Model (%)", 'font': {'size': 18}},
-                    gauge={
-                        'axis': {'range': [0, 100], 'tickwidth': 1},
-                        'bar': {'color': "#f97316"},
-                        'bgcolor': "white",
-                        'borderwidth': 2,
-                        'bordercolor': "gray",
-                        'steps': [
-                            {'range': [0, 50], 'color': '#fee2e2'},
-                            {'range': [50, 80], 'color': '#fef08a'},
-                            {'range': [80, 100], 'color': '#dcfce3'}
-                        ]
-                    }
-                ))
-                fig_gauge.update_layout(height=320, margin=dict(l=10, r=10, t=40, b=10))
-                st.plotly_chart(fig_gauge, use_container_width=True)
+                st.markdown(f"### Hasil: {res} {emo}")
+                st.write(f"Probabilitas: {conf}%")
+                st.progress(conf/100)
