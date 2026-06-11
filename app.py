@@ -196,7 +196,6 @@ with st.sidebar:
 if menu == "Dashboard":
     st.markdown("<h2>Dashboard Keseluruhan</h2>", unsafe_allow_html=True)
     
-    # --- MENAMPILKAN HASIL MASSAL JIKA SUDAH DIUPLOAD ---
     if st.session_state.dataset is not None:
         filename = st.session_state.uploaded_filename
         df_batch = st.session_state.dataset
@@ -207,8 +206,7 @@ if menu == "Dashboard":
         batch_net = len(df_batch[df_batch['Sentimen'] == "Netral"])
         
         # 1. TAMPILKAN MATRIKS AKURASI DARI FILE YANG DIUPLOAD SECARA DINAMIS
-        if 'Label Asli' in df_batch.columns:
-            # Hitung akurasi real-time dari file massal
+        if 'Label Asli' in df_batch.columns
             correct_preds = (df_batch['Label Asli'] == df_batch['Sentimen']).sum()
             accuracy_val = (correct_preds / batch_total) * 100
             
@@ -329,7 +327,7 @@ elif menu == "Data Management":
         st.write(f"📁 **{st.session_state.uploaded_filename}** — {len(df_view)} baris terdeteksi.")
         st.dataframe(df_view.head(5), use_container_width=True)
         
-        if st.button("Jalankan Analisis Massal & Hitung Confusion Matrix"):
+        if st.button("Jalankan Analisis Massal"):
             with st.spinner("Model AI sedang menganalisis seluruh data massal..."):
                 # Cari kolom teks secara otomatis
                 text_col = next((c for c in ['text', 'ulasan', 'komentar', 'textDisplay', 'Teks'] if c in df_view.columns), df_view.columns[0])
@@ -416,7 +414,7 @@ elif menu == "Data Management":
 elif menu == "Sentiment Prediction":
     st.markdown("<h2>Sentiment Prediction (Single Text)</h2>", unsafe_allow_html=True)
     with st.container(border=True):
-        input_text = st.text_area("Masukkan teks ulasan mentah", placeholder="Contoh: Aplikasi Ruangguru sangat membantu belajar saya selama ujian!", height=150)
+        input_text = st.text_area("Masukkan teks ulasan mentah", placeholder="Contoh: seru banget!", height=150)
         
         if st.button("Analisis Sentimen"):
             if input_text.strip():
