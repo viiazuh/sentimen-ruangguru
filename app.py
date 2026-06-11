@@ -175,8 +175,9 @@ def find_keras_tokenizer(obj, depth=0):
     return None
 
 def extract_sequences(pipeline, texts_list):
-    """Mengekstraksi token secara aman tanpa validasi Estimator"""
-    clean_texts = [re.sub(r'[^\w\s]', '', str(t).lower()) for t in texts_list]
+    """Mengekstraksi token secara aman, disamakan persis dengan Colab (.lower() saja)"""
+    # Regex re.sub dihapus agar inputnya sama persis dengan Colab
+    clean_texts = [str(t).lower() for t in texts_list]
     tokenizer = find_keras_tokenizer(pipeline)
     
     if tokenizer:
