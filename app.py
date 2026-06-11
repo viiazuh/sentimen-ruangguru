@@ -15,7 +15,7 @@ import plotly.figure_factory as ff
 # --- SET PAGE CONFIG ---
 st.set_page_config(page_title="Sentiment Pro", page_icon="🙂", layout="wide")
 
-# --- CUSTOM CSS (PRESISI REVISI BAR HORIZONTAL ORANJE SESUAI GAMBAR) ---
+# --- CUSTOM CSS (PRESISI FIGMA & INTER FONT) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght=400;500;600;700&display=swap');
@@ -66,7 +66,7 @@ st.markdown("""
         color: #000000 !important;
     }
 
-    /* DASHBOARD & DATA MANAGEMENT METRIC CARD */
+    /* METRIC CARD STYLING */
     .metric-card { 
         background-color: white; 
         padding: 20px; 
@@ -88,7 +88,6 @@ st.markdown("""
         width: 100%;
     }
     
-    /* Tombol Download Khusus */
     [data-testid="stDownloadButton"] > button {
         background: #ffffff !important;
         color: #1f2937 !important;
@@ -96,30 +95,11 @@ st.markdown("""
         border-radius: 8px !important;
         font-weight: 500 !important;
     }
-
-    /* SELEKTOR CSS KHUSUS UNTUK MEMAKSA ST.PROGRESS BERBENTUK SEPERTI GAMBAR */
-    div [data-testid="stProgress"] div div {
-        background-color: #f97316 !important; /* Warna Oranje Terang */
-        border-radius: 20px !important;       /* Lengkungan Sempurna */
-        height: 14px !important;               /* Ketebalan Bar */
-    }
-    div [data-testid="stProgress"] div {
-        background-color: #e5e7eb !important; /* Background Abu-abu Wadah Bar */
-        border-radius: 20px !important;
-        height: 14px !important;
-    }
-    /* Sembunyikan Label Angka Persen Bawaan di Atas Bar */
-    div [data-testid="stProgress"] > div > div > div {
-        display: none !important;
-    }
-    .stProgress p {
-        display: none !important;
-    }
     </style>
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# DEFINISI STRUKTUR PIPELINE UNTUK MENCEGAH ERROR FILE PKL
+# DEFINISI STRUKTUR PIPELINE UNTUK MENCEGAH ERROR PKL
 # =========================================================================
 class TextPreprocessor:
     def __init__(self, *args, **kwargs): pass
@@ -214,28 +194,97 @@ with st.sidebar:
 
 # --- DASHBOARD ---
 if menu == "Dashboard":
-    st.markdown("<h2>Dashboard</h2>", unsafe_allow_html=True)
+    st.markdown("<h2>Dashboard Keseluruhan</h2>", unsafe_allow_html=True)
     
-    st.markdown("""
-        <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 30px; border-radius: 12px; text-align: center; color: white; margin-bottom: 20px;">
-            <h3 style="margin: 0; font-size: 1.5rem; font-weight: 500;">Akurasi Klasifikasi Model</h3>
-            <h1 style="margin: 0; font-size: 4.5rem; font-weight: 800;">97.0%</h1>
-            <p style="margin: 0; font-size: 1.1rem; opacity: 0.9;">Berdasarkan pengujian dataset validasi</p>
-        </div>
-    """, unsafe_allow_html=True)
+    # --- MENAMPILKAN HASIL MASSAL JIKA SUDAH DIUPLOAD ---
+    if st.session_state.dataset is not None:
+        filename = st.session_state.uploaded_filename
+        df_batch = st.session_state.dataset
+        
+        batch_total = len(df_batch)
+        batch_pos = len(df_batch[df_batch['Sentimen'] == "Positif"])
+        batch_neg = len(df_batch[df_batch['Sentimen'] == "Negatif"])
+        batch_net = len(df_batch[df_batch['Sentimen'] == "Netral"])
+        
+        # 1. TAMPILKAN MATRIKS AKURASI DARI FILE YANG DIUPLOAD SECARA DINAMIS
+        if 'Label Asli' in df_batch.columns:
+            # Hitung akurasi real-time dari file massal
+            correct_preds = (df_batch['Label Asli'] == df_batch['Sentimen']).sum()
+            accuracy_val = (correct_preds / batch_total) * 100
+            
+            st.markdown(f"""
+                <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 30px; border-radius: 12px; text-align: center; color: white; margin-bottom: 20px;">
+                    <h3 style="margin: 0; font-size: 1.5rem; font-weight: 500;">Akurasi Analisis File Massal</h3>
+                    <h1 style="margin: 0; font-size: 4.5rem; font-weight: 800;">{accuracy_val:.1f}%</h1>
+                    <p style="margin: 0; font-size: 1.1rem; opacity: 0.9;">File: {filename} ({batch_total} Baris Data)</p>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            st.markdown("<h4>Confusion Matrix Hasil Analisis Massal</h4>", unsafe_allow_html=True)
+            
+            # Membuat Crosstab Real-Time antara Label Asli vs Hasil Prediksi Model
+            # Memaksa urutan kategori agar rapi dan konsisten: Positif, Negatif, Netral
+            categories = ['Positif', 'Negatif', 'Netral']
+            df_batch['Label Asli'] = pd.Categorical(df_batch['Label Asli'], categories=categories)
+            df_batch['Sentimen'] = pd.Categorical(df_batch['Sentimen'], categories=categories)
+            
+            ct = pd.crosstab(df_batch['Label Asli'], df_batch['Sentimen'], dropna=False)
+            
+            z_dynamic = ct.values.tolist()
+            x_dynamic = [f"Prediksi {c}" for c in ct.columns]
+            y_dynamic = [f"Aktual {r}" for r in ct.index]
+            
+            fig_cm = ff.create_annotated_heatmap(z_dynamic, x=x_dynamic, y=y_dynamic, colorscale='Blues', showscale=True)
+            fig_cm.update_layout(height=400, margin=dict(l=20, r=20, t=20, b=20), font=dict(size=14))
+            st.plotly_chart(fig_cm, use_container_width=True)
+            st.divider()
 
-    st.markdown("<h4>Matriks Performa Model(Confusion Matrix)</h4>", unsafe_allow_html=True)
-    
-    z = [[950, 15, 5], [10, 890, 12], [5, 10, 920]]
-    x = ['Prediksi Positif', 'Prediksi Negatif', 'Prediksi Netral']
-    y = ['Aktual Positif', 'Aktual Negatif', 'Aktual Netral']
-    
-    fig_cm = ff.create_annotated_heatmap(z, x=x, y=y, colorscale='Blues', showscale=True)
-    fig_cm.update_layout(height=400, margin=dict(l=20, r=20, t=20, b=20), font=dict(size=14))
-    st.plotly_chart(fig_cm, use_container_width=True)
-    st.divider()
-    
-    st.markdown("<h4>📊 Statistik Analisis Tunggal (Real-time Session)</h4>", unsafe_allow_html=True)
+        # 2. METRIK UTAMA DARI DATA MASSAL
+        st.markdown(f"<h4>📁 Statistik Analisis Massal (File: {filename})</h4>", unsafe_allow_html=True)
+        b1, b2, b3, b4 = st.columns(4)
+        with b1: st.markdown(f'<div class="metric-card"><div class="metric-title">Total Massal</div><div class="metric-value">{batch_total}</div></div>', unsafe_allow_html=True)
+        with b2: st.markdown(f'<div class="metric-card"><div class="metric-title">Positif 😊</div><div class="metric-value">{batch_pos}</div></div>', unsafe_allow_html=True)
+        with b3: st.markdown(f'<div class="metric-card"><div class="metric-title">Negatif 😞</div><div class="metric-value">{batch_neg}</div></div>', unsafe_allow_html=True)
+        with b4: st.markdown(f'<div class="metric-card"><div class="metric-title">Netral 😐</div><div class="metric-value">{batch_net}</div></div>', unsafe_allow_html=True)
+        
+        st.markdown("<div style='font-size:16px; font-weight:600; margin-bottom:10px;'>Grafik Distribusi Sentimen File Upload</div>", unsafe_allow_html=True)
+        df_batch_chart = pd.DataFrame({
+            "Sentimen": ["Positif", "Negatif", "Netral"],
+            "Jumlah Data": [batch_pos, batch_neg, batch_net]
+        })
+        
+        col_bar_batch, col_pie_batch = st.columns(2)
+        with col_bar_batch:
+            fig_bar_batch = px.bar(df_batch_chart, x="Sentimen", y="Jumlah Data", color="Sentimen", color_discrete_map=COLOR_MAP, text_auto=True)
+            fig_bar_batch.update_layout(showlegend=False, margin=dict(l=0, r=0, t=20, b=0), xaxis_title=None, yaxis_title=None)
+            st.plotly_chart(fig_bar_batch, use_container_width=True)
+            
+        with col_pie_batch:
+            fig_pie_batch = px.pie(df_batch_chart, names="Sentimen", values="Jumlah Data", color="Sentimen", color_discrete_map=COLOR_MAP, hole=0.3)
+            fig_pie_batch.update_layout(margin=dict(l=0, r=0, t=20, b=0))
+            st.plotly_chart(fig_pie_batch, use_container_width=True)
+            
+        st.markdown("<div style='font-size:16px; font-weight:600; margin-top:20px; margin-bottom:10px;'>Preview Hasil Analisis Massal</div>", unsafe_allow_html=True)
+        items_per_page_db = 10
+        total_pages_db = max(1, (batch_total + items_per_page_db - 1) // items_per_page_db)
+        
+        if st.session_state.page_dashboard >= total_pages_db: st.session_state.page_dashboard = total_pages_db - 1
+        start_idx_db = st.session_state.page_dashboard * items_per_page_db
+        end_idx_db = start_idx_db + items_per_page_db
+        
+        st.dataframe(df_batch.iloc[start_idx_db:end_idx_db], use_container_width=True)
+        
+        col_prev_db, col_info_db, col_next_db = st.columns([1, 4, 1])
+        with col_prev_db:
+            st.button("Prev", key="btn_prev_dash", on_click=lambda: st.session_state.update(page_dashboard=st.session_state.page_dashboard - 1), disabled=(st.session_state.page_dashboard == 0), use_container_width=True)
+        with col_info_db:
+            st.markdown(f"<div style='text-align: center; margin-top: 10px; font-weight: 500;'>Halaman {st.session_state.page_dashboard + 1} dari {total_pages_db}</div>", unsafe_allow_html=True)
+        with col_next_db:
+            st.button("Next", key="btn_next_dash", on_click=lambda: st.session_state.update(page_dashboard=st.session_state.page_dashboard + 1), disabled=(st.session_state.page_dashboard >= total_pages_db - 1), use_container_width=True)
+        st.divider()
+
+    # --- 3. BAGIAN STATISTIK REAL-TIME (PENGUJIAN TUNGGAL) ---
+    st.markdown("<h4>📊 Statistik Analisis Tunggal (Sesi Aktif)</h4>", unsafe_allow_html=True)
     s = st.session_state.single_stats
     
     c1, c2, c3, c4 = st.columns(4)
@@ -244,7 +293,6 @@ if menu == "Dashboard":
     with c3: st.markdown(f'<div class="metric-card"><div class="metric-title">Negatif 😞</div><div class="metric-value">{s["negatif"]}</div></div>', unsafe_allow_html=True)
     with c4: st.markdown(f'<div class="metric-card"><div class="metric-title">Netral 😐</div><div class="metric-value">{s["netral"]}</div></div>', unsafe_allow_html=True)
     
-    st.markdown("<div style='font-size:16px; font-weight:600; margin-bottom:10px; margin-top:10px;'>Grafik Sentimen (Real-time Session)</div>", unsafe_allow_html=True)
     if s["total"] > 0:
         df_rt = pd.DataFrame({"Sentimen": ["Positif", "Negatif", "Netral"], "Jumlah Data": [s["positif"], s["negatif"], s["netral"]]})
         col_bar_rt, col_pie_rt = st.columns(2)
@@ -260,60 +308,14 @@ if menu == "Dashboard":
         st.markdown("<div style='font-size:16px; font-weight:600; margin-top:20px; margin-bottom:10px;'>Daftar Hasil Pengujian Sesi Aktif</div>", unsafe_allow_html=True)
         st.dataframe(pd.DataFrame(reversed(st.session_state.prediction_history)), use_container_width=True)
     else:
-        st.info("Belum ada data grafik maupun daftar pengujian tunggal pada sesi ini.")
-
-    if st.session_state.dataset is not None:
-        st.divider()
-        filename = st.session_state.uploaded_filename
-        st.markdown(f"<h4>📁 Statistik Analisis Massal (File: {filename})</h4>", unsafe_allow_html=True)
-        
-        df_batch = st.session_state.dataset
-        batch_total = len(df_batch)
-        batch_pos = len(df_batch[df_batch['Sentimen'] == "Positif"])
-        batch_neg = len(df_batch[df_batch['Sentimen'] == "Negatif"])
-        batch_net = len(df_batch[df_batch['Sentimen'] == "Netral"])
-        
-        b1, b2, b3, b4 = st.columns(4)
-        with b1: st.markdown(f'<div class="metric-card"><div class="metric-title">Total Massal</div><div class="metric-value">{batch_total}</div></div>', unsafe_allow_html=True)
-        with b2: st.markdown(f'<div class="metric-card"><div class="metric-title">Positif 😊</div><div class="metric-value">{batch_pos}</div></div>', unsafe_allow_html=True)
-        with b3: st.markdown(f'<div class="metric-card"><div class="metric-title">Negatif 😞</div><div class="metric-value">{batch_neg}</div></div>', unsafe_allow_html=True)
-        with b4: st.markdown(f'<div class="metric-card"><div class="metric-title">Netral 😐</div><div class="metric-value">{batch_net}</div></div>', unsafe_allow_html=True)
-        
-        st.markdown("<div style='font-size:16px; font-weight:600; margin-bottom:10px; margin-top:10px;'>Grafik Sentimen File Upload</div>", unsafe_allow_html=True)
-        df_batch_chart = pd.DataFrame({"Sentimen": ["Positif", "Negatif", "Netral"], "Jumlah Data": [batch_pos, batch_neg, batch_net]})
-        
-        col_bar_batch, col_pie_batch = st.columns(2)
-        with col_bar_batch:
-            fig_bar_batch = px.bar(df_batch_chart, x="Sentimen", y="Jumlah Data", color="Sentimen", color_discrete_map=COLOR_MAP, text_auto=True)
-            fig_bar_batch.update_layout(showlegend=False, margin=dict(l=0, r=0, t=20, b=0), xaxis_title=None, yaxis_title=None)
-            st.plotly_chart(fig_bar_batch, use_container_width=True)
-        with col_pie_batch:
-            fig_pie_batch = px.pie(df_batch_chart, names="Sentimen", values="Jumlah Data", color="Sentimen", color_discrete_map=COLOR_MAP, hole=0.3)
-            fig_pie_batch.update_layout(margin=dict(l=0, r=0, t=20, b=0))
-            st.plotly_chart(fig_pie_batch, use_container_width=True)
-            
-        st.markdown("<div style='font-size:16px; font-weight:600; margin-top:20px; margin-bottom:10px;'>Preview Hasil Analisis Massal</div>", unsafe_allow_html=True)
-        items_per_page_db = 10
-        total_pages_db = max(1, (batch_total + items_per_page_db - 1) // items_per_page_db)
-        
-        if st.session_state.page_dashboard >= total_pages_db: st.session_state.page_dashboard = total_pages_db - 1
-        start_idx_db = st.session_state.page_dashboard * items_per_page_db
-        end_idx_db = start_idx_db + items_per_page_db
-        st.dataframe(df_batch.iloc[start_idx_db:end_idx_db], use_container_width=True)
-        
-        col_prev_db, col_info_db, col_next_db = st.columns([1, 4, 1])
-        with col_prev_db:
-            st.button("Prev", key="btn_prev_dash", on_click=lambda: st.session_state.update(page_dashboard=st.session_state.page_dashboard - 1), disabled=(st.session_state.page_dashboard == 0), use_container_width=True)
-        with col_info_db:
-            st.markdown(f"<div style='text-align: center; margin-top: 10px; font-weight: 500;'>Halaman {st.session_state.page_dashboard + 1} dari {total_pages_db}</div>", unsafe_allow_html=True)
-        with col_next_db:
-            st.button("Next", key="btn_next_dash", on_click=lambda: st.session_state.update(page_dashboard=st.session_state.page_dashboard + 1), disabled=(st.session_state.page_dashboard >= total_pages_db - 1), use_container_width=True)
+        if st.session_state.dataset is None:
+            st.info("💡 Selamat Datang! Silakan lakukan prediksi tunggal di menu 'Sentiment Prediction' atau upload dataset berlabel di menu 'Data Management' untuk memunculkan Confusion Matrix.")
 
 # --- DATA MANAGEMENT ---
 elif menu == "Data Management":
     st.markdown("<h2>Data Management</h2>", unsafe_allow_html=True)
     
-    uploaded_file = st.file_uploader("Upload dataset ulasan", type=["csv", "xlsx"])
+    uploaded_file = st.file_uploader("Upload dataset ulasan (Pastikan memiliki kolom Teks dan kolom Label Asli)", type=["csv", "xlsx"])
     if uploaded_file:
         if st.session_state.uploaded_filename != uploaded_file.name:
             st.session_state.uploaded_df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
@@ -324,24 +326,20 @@ elif menu == "Data Management":
 
     if st.session_state.uploaded_df is not None:
         df_view = st.session_state.uploaded_df
-        st.write(f"📁 **{st.session_state.uploaded_filename}** — {len(df_view)} baris")
+        st.write(f"📁 **{st.session_state.uploaded_filename}** — {len(df_view)} baris terdeteksi.")
         st.dataframe(df_view.head(5), use_container_width=True)
         
-        if st.button("Jalankan Analisis Massal"):
-            # --- FEATURE WORK: INDIKATOR LOADING BERBENTUK BAR ORANJE YANG BERJALAN HINGGA FULL (100%) ---
-            loading_bar_massal = st.progress(0)
-            for percent in range(1, 101, 10):
-                time.sleep(0.04)
-                loading_bar_massal.progress(percent)
-                
-            with st.spinner("Menganalisis..."):
-                text_col = next((c for c in ['text', 'ulasan', 'komentar', 'textDisplay'] if c in df_view.columns), df_view.columns[0])
+        if st.button("Jalankan Analisis Massal & Hitung Confusion Matrix"):
+            with st.spinner("Model AI sedang menganalisis seluruh data massal..."):
+                # Cari kolom teks secara otomatis
+                text_col = next((c for c in ['text', 'ulasan', 'komentar', 'textDisplay', 'Teks'] if c in df_view.columns), df_view.columns[0])
                 texts = df_view[text_col].astype(str).tolist()
                 
+                # Ekstraksi sequence tokenisasi
                 seqs = extract_sequences(pipeline_ml, texts)
                 
                 if seqs is None:
-                    st.error("Gagal melakukan tokenisasi data massal.")
+                    st.error("Gagal melakukan tokenisasi. Tokenizer asli Keras tidak ditemukan.")
                 else:
                     padded = tf.keras.preprocessing.sequence.pad_sequences(seqs, maxlen=100, padding='post')
                     preds = model_ml.predict(padded, batch_size=512, verbose=0)
@@ -350,24 +348,35 @@ elif menu == "Data Management":
                     res_list = [labels[np.argmax(p)] for p in preds]
                     conf_list = [int(np.max(p)*100) for p in preds]
                     
-                    st.session_state.dataset = pd.DataFrame({"Text Asli": texts, "Sentimen": res_list, "Probabilitas(%)": conf_list})
+                    data_result = {
+                        "Text Asli": texts, 
+                        "Sentimen": res_list,
+                        "Probabilitas(%)": conf_list
+                    }
+                    
+                    # DETEKSI KOLOM LABEL ASLI DARI FILE YANG DIUPLOAD (Kunci Jawaban)
+                    label_col = next((c for c in ['label', 'sentimen', 'sentiment', 'actual', 'Label Asli', 'sentimen_asli'] if c in df_view.columns), None)
+                    if label_col:
+                        # Standardisasi nilai label agar seragam kapitalisasinya (Positif, Negatif, Netral)
+                        raw_labels = df_view[label_col].astype(str).str.strip().str.capitalize()
+                        data_result["Label Asli"] = raw_labels.values
+                    else:
+                        # Jika dosen lupa buat nama kolom yang tepat, kita pasangkan kolom pertama selain teks sebagai asumsi label asli
+                        potential_cols = [c for c in df_view.columns if c != text_col]
+                        if potential_cols:
+                            data_result["Label Asli"] = df_view[potential_cols[0]].astype(str).str.strip().str.capitalize().values
+                    
+                    st.session_state.dataset = pd.DataFrame(data_result)
                     st.session_state.page = 0 
                     st.session_state.page_dashboard = 0
+                    st.success("🎉 Analisis selesai! Silakan cek menu 'Dashboard' untuk melihat grafik Confusion Matrix hasil pengujian.")
 
     if st.session_state.dataset is not None:
         st.divider()
-        st.subheader("Hasil Analisis")
+        st.subheader("Tabel Hasil Klasifikasi Model AI")
+        
         res_df = st.session_state.dataset
         total_n = len(res_df)
-        p_n = len(res_df[res_df['Sentimen'] == "Positif"])
-        neg_n = len(res_df[res_df['Sentimen'] == "Negatif"])
-        net_n = len(res_df[res_df['Sentimen'] == "Netral"])
-        
-        m1, m2, m3, m4 = st.columns(4)
-        with m1: st.markdown(f'<div class="metric-card"><div class="metric-title">Total</div><div class="metric-value">{total_n}</div></div>', unsafe_allow_html=True)
-        with m2: st.markdown(f'<div class="metric-card"><div class="metric-title">😊 Positif</div><div class="metric-value">{p_n}</div></div>', unsafe_allow_html=True)
-        with m3: st.markdown(f'<div class="metric-card"><div class="metric-title">😞 Negatif</div><div class="metric-value">{neg_n}</div></div>', unsafe_allow_html=True)
-        with m4: st.markdown(f'<div class="metric-card"><div class="metric-title">😐 Netral</div><div class="metric-value">{net_n}</div></div>', unsafe_allow_html=True)
         
         items_per_page = 10
         total_pages = max(1, (total_n + items_per_page - 1) // items_per_page)
@@ -375,6 +384,7 @@ elif menu == "Data Management":
         
         start_idx = st.session_state.page * items_per_page
         end_idx = start_idx + items_per_page
+        
         st.dataframe(res_df.iloc[start_idx:end_idx], use_container_width=True)
         
         col_prev, col_info, col_next = st.columns([1, 4, 1])
@@ -404,19 +414,12 @@ elif menu == "Data Management":
 
 # --- PREDICTION ---
 elif menu == "Sentiment Prediction":
-    st.markdown("<h2>Sentiment Prediction</h2>", unsafe_allow_html=True)
+    st.markdown("<h2>Sentiment Prediction (Single Text)</h2>", unsafe_allow_html=True)
     with st.container(border=True):
-        input_text = st.text_area("Masukkan teks ulasan", placeholder="Contoh: Seru banget!", height=150)
+        input_text = st.text_area("Masukkan teks ulasan mentah", placeholder="Contoh: Aplikasi Ruangguru sangat membantu belajar saya selama ujian!", height=150)
         
-        # Sesuai Gambar: Menggunakan teks tombol "Analisis"
-        if st.button("Analisis"):
+        if st.button("Analisis Sentimen"):
             if input_text.strip():
-                # --- PROGRESS LOADING SEBELUM MUNCUL DATA (PAKAI BAR KUNING JALAN) ---
-                loading_bar_single = st.progress(0)
-                for percent in range(1, 101, 20):
-                    time.sleep(0.03)
-                    loading_bar_single.progress(percent)
-                    
                 res, emo, conf = get_prediction(input_text)
                 
                 st.session_state.single_stats["total"] += 1
@@ -430,11 +433,27 @@ elif menu == "Sentiment Prediction":
                     "Tingkat Keyakinan": f"{conf}%"
                 })
                 
-                # --- LAYOUT PRESISI SESUAI REFERENSI GAMBAR ---
                 st.divider()
-                st.markdown(f"<div style='font-size: 20px; font-weight: 700; color: #000000; margin-bottom: 2px;'>Hasil: {res} {emo}</div>", unsafe_allow_html=True)
-                st.markdown(f"<div style='font-size: 14px; color: #4b5563; margin-bottom: 8px;'>Probabilitas {conf}%</div>", unsafe_allow_html=True)
+                st.markdown(f"<h3 style='text-align: center; font-size: 2rem;'>Hasil Analisis: {res} {emo}</h3>", unsafe_allow_html=True)
                 
-                # BAR HORIZONTAL STATIS ORANJE SEBAGAI INDIKATOR PERSENTASE AKURASI/PROBABILITASNYA
-                accuracy_bar = st.progress(0)
-                accuracy_bar.progress(conf) # Panjang bar mengikuti persentase keyakinan model (contoh: 99%)
+                # GAUGE CHART VISUALISASI PROBABILITAS
+                fig_gauge = go.Figure(go.Indicator(
+                    mode="gauge+number",
+                    value=conf,
+                    domain={'x': [0, 1], 'y': [0, 1]},
+                    title={'text': "Tingkat Keyakinan Prediksi Model (%)", 'font': {'size': 18}},
+                    gauge={
+                        'axis': {'range': [0, 100], 'tickwidth': 1},
+                        'bar': {'color': "#f97316"},
+                        'bgcolor': "white",
+                        'borderwidth': 2,
+                        'bordercolor': "gray",
+                        'steps': [
+                            {'range': [0, 50], 'color': '#fee2e2'},
+                            {'range': [50, 80], 'color': '#fef08a'},
+                            {'range': [80, 100], 'color': '#dcfce3'}
+                        ]
+                    }
+                ))
+                fig_gauge.update_layout(height=320, margin=dict(l=10, r=10, t=40, b=10))
+                st.plotly_chart(fig_gauge, use_container_width=True)
