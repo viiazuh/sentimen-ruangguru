@@ -383,18 +383,22 @@ elif menu == "Data Management":
                         "Probabilitas(%)": conf_list
                     }
                     
+                   # --- DETEKSI LABEL ASLI & MAPPING OTOMATIS ---
                     label_col = next((c for c in ['label', 'sentimen', 'sentiment', 'actual', 'Label Asli', 'sentimen_asli'] if c in df_view.columns), None)
                     if label_col:
-                        raw_labels = df_view[label_col].astype(str).str.strip().str.capitalize()
-                        data_result["Label Asli"] = raw_labels.values
+                        # Ambil data mentah dan jadikan string
+                        raw_labels = df_view[label_col].astype(str).str.strip()
+                        
+                        # Mapping otomatis dari angka ke teks
+                        mapping_angka = {'1': 'Positif', '1.0': 'Positif', '0': 'Netral', '0.0': 'Netral', '-1': 'Negatif', '-1.0': 'Negatif'}
+                        mapped_labels = raw_labels.map(lambda x: mapping_angka.get(x, x)).str.capitalize()
+                        data_result["Label Asli"] = mapped_labels.values
                     else:
                         potential_cols = [c for c in df_view.columns if c != text_col]
                         if potential_cols:
                             data_result["Label Asli"] = df_view[potential_cols[0]].astype(str).str.strip().str.capitalize().values
                     
                     st.session_state.dataset = pd.DataFrame(data_result)
-                    # --- AKHIR FITUR DETEKSI LABEL ---
-                    
                     st.session_state.page = 0 
                     st.session_state.page_dashboard = 0
 
