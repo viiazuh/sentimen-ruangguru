@@ -135,7 +135,7 @@ if 'prediction_history' not in st.session_state:
 def load_sentiment_model():
     try:
         BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-        model_path = os.path.join(BASE_DIR, 'models', 'model_final.h5')
+        model_path = os.path.join(BASE_DIR, 'models', 'best_model_S1_&_S2_tanpa_SMOTE.h5')
         pkl_path = os.path.join(BASE_DIR, 'models', 'pipeline_s12_raw.pkl')
         
 
