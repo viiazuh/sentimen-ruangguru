@@ -86,48 +86,67 @@ st.markdown("""
         font-weight: 700; 
     }
 
-    /* TOMBOL ANALISIS & DOWNLOAD */
-    .stButton > button, 
-    div[data-testid="stButton"] > button,
-    button[kind="secondary"] { 
-        background-color: #f97316 !important; 
-        color: #ffffff !important; 
-        border-color: #f97316 !important;
-        border-radius: 8px !important; 
-        font-weight: 600 !important; 
+    /* TOMBOL UTAMA */
+
+    div[data-testid="stButton"] > button {
+        background-color: #f97316 !important;
+        color: #ffffff !important;
+        border: 1px solid #f97316 !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
         width: 100%;
         transition: all 0.3s ease;
     }
-    
-    .stButton > button:hover, 
-    div[data-testid="stButton"] > button:hover,
-    button[kind="secondary"]:hover {
-        background-color: #ea580c !important; 
+    div[data-testid="stButton"] > button:hover {
+        background-color: #ea580c !important;
         border-color: #ea580c !important;
         color: #ffffff !important;
     }
-    
-    .stButton > button:focus:not(:active),
-    div[data-testid="stButton"] > button:focus:not(:active) {
-        color: #ffffff !important;
+
+    /* ========================================= */
+    /* 2. TOMBOL UPLOAD FILE (Tidak Berwarna)    */
+    /* ========================================= */
+    div[data-testid="stFileUploader"] button {
+        background-color: #ffffff !important;
+        color: #1f2937 !important;
+        border: 1px solid #d1d5db !important;
+        border-radius: 8px !important;
+        font-weight: 500 !important;
+    }
+    div[data-testid="stFileUploader"] button:hover {
         border-color: #f97316 !important;
+        color: #f97316 !important;
+        background-color: #fffaf5 !important;
     }
 
-
+    /* TOMBOL DOWNLOAD */
     div[data-testid="stDownloadButton"] > button {
-        background-color: #1e293b !important; 
+        background-color: #1e293b !important;
         color: #ffffff !important;
-        border-color: #1e293b !important;
+        border: 1px solid #1e293b !important;
         border-radius: 8px !important;
         font-weight: 600 !important;
+        width: 100%;
         transition: all 0.3s ease;
     }
-    
     div[data-testid="stDownloadButton"] > button:hover {
-        background-color: #0f172a !important; 
+        background-color: #0f172a !important;
         border-color: #0f172a !important;
         color: #ffffff !important;
     }
+
+    /* TOMBOL HAPUS HASIL */
+    div[data-testid="column"]:nth-of-type(4) div[data-testid="stButton"] > button {
+        background-color: #ffffff !important;
+        color: #ef4444 !important; /* Teks Merah */
+        border: 1px solid #ef4444 !important; /* Garis Tepi Merah */
+    }
+    div[data-testid="column"]:nth-of-type(4) div[data-testid="stButton"] > button:hover {
+        background-color: #ef4444 !important; /* Background jadi merah saat disentuh */
+        color: #ffffff !important; /* Teks jadi putih saat disentuh */
+        border-color: #ef4444 !important;
+    }
+    
     </style>
     """, unsafe_allow_html=True)
 
