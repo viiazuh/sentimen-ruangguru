@@ -76,7 +76,7 @@ st.markdown("""
     }
     .metric-title { 
         color: #6b7280; 
-        font-size: 1.1rem; /* Diperbesar dari 0.85rem */
+        font-size: 1.1rem; 
         font-weight: 600; 
         text-transform: uppercase; 
     }
@@ -410,18 +410,15 @@ elif menu == "Data Management":
         st.dataframe(df_view.head(5), use_container_width=True)
         
         if st.button("Jalankan Analisis Massal"):
-            with st.spinner("Menganalisis..."):
+            with st.spinner("Sedang menganalisis dataset secara massal..."):
                 text_col = next((c for c in ['text', 'ulasan', 'komentar', 'textDisplay'] if c in df_view.columns), df_view.columns[0])
                 texts = df_view[text_col].astype(str).tolist()
-                prog = st.progress(0)
                 
                 seqs = extract_sequences(pipeline_ml, texts)
-                prog.progress(0.5)
                 
                 if seqs is None:
                     st.error("Gagal melakukan tokenisasi. Tokenizer asli Keras tidak ditemukan.")
                 else:
-                  
                     padded = tf.keras.preprocessing.sequence.pad_sequences(seqs, maxlen=32, padding='post', truncating='post')
                     preds = model_ml.predict(padded, batch_size=512, verbose=0)
                     
