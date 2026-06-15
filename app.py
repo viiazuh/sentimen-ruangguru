@@ -75,7 +75,7 @@ st.markdown("""
     [data-testid="stSidebar"] [data-testid="stWidgetLabel"] { display: none; }
 
     [data-testid="stSidebar"] label {
-        font-size: 22px !important;
+        font-size: 25px !important;
         font-weight: 400 !important;
         color: #000000 !important;
     }
