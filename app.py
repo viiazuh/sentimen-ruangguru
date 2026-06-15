@@ -81,38 +81,55 @@ st.markdown("""
         text-transform: uppercase; 
     }
     .metric-value { 
-    .metric-value { 
         color: #1f2937; 
         font-size: 2rem; 
         font-weight: 700; 
     }
 
-    /* TOMBOL UTAMA: ANALISIS (ORANYE) */
-    div[data-testid="stButton"] > button { 
+    /* ========================================= */
+    /* TOMBOL UTAMA: ANALISIS (ORANYE)           */
+    /* ========================================= */
+    .stButton > button, 
+    div[data-testid="stButton"] > button,
+    button[kind="secondary"] { 
         background-color: #f97316 !important; 
         color: #ffffff !important; 
+        border-color: #f97316 !important;
         border-radius: 8px !important; 
         font-weight: 600 !important; 
-        border: none !important;
         width: 100%;
         transition: all 0.3s ease;
     }
-    div[data-testid="stButton"] > button:hover {
+    
+    .stButton > button:hover, 
+    div[data-testid="stButton"] > button:hover,
+    button[kind="secondary"]:hover {
         background-color: #ea580c !important; 
+        border-color: #ea580c !important;
         color: #ffffff !important;
     }
+    
+    .stButton > button:focus:not(:active),
+    div[data-testid="stButton"] > button:focus:not(:active) {
+        color: #ffffff !important;
+        border-color: #f97316 !important;
+    }
 
-    /* TOMBOL DOWNLOAD (ABU-ABU GELAP / SLATE) */
+    /* ========================================= */
+    /* TOMBOL DOWNLOAD (ABU-ABU GELAP / SLATE)   */
+    /* ========================================= */
     div[data-testid="stDownloadButton"] > button {
         background-color: #1e293b !important; 
         color: #ffffff !important;
-        border: none !important;
+        border-color: #1e293b !important;
         border-radius: 8px !important;
         font-weight: 600 !important;
         transition: all 0.3s ease;
     }
+    
     div[data-testid="stDownloadButton"] > button:hover {
         background-color: #0f172a !important; 
+        border-color: #0f172a !important;
         color: #ffffff !important;
     }
     </style>
