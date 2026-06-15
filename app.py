@@ -54,7 +54,7 @@ st.markdown("""
 
     /* HEADER SIDEBAR */
     .sidebar-title {
-        font-size: 26px;
+        font-size: 50px;
         font-weight: 700;
         color: #1e293b;
         margin-bottom: 8px;
