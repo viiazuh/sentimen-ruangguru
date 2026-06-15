@@ -54,14 +54,14 @@ st.markdown("""
 
     /* HEADER SIDEBAR */
     .sidebar-title {
-        font-size: 50px;
+        font-size: 40px;
         font-weight: 700;
         color: #1e293b;
         margin-bottom: 8px;
     }
     
     .sidebar-subtitle {
-        font-size: 18px;
+        font-size: 25px;
         color: #1e293b;
         margin-bottom: 40px;
         font-weight: 400;
