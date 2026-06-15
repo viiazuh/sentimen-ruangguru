@@ -86,38 +86,46 @@ st.markdown("""
         font-weight: 700; 
     }
 
-    /* ========================================= */
-    /* TOMBOL UTAMA: ANALISIS (ORANYE)           */
-    /* ========================================= */
-    .stButton > button, 
-    div[data-testid="stButton"] > button,
-    button[kind="secondary"] { 
+   /* ui button */
+    div[data-testid="stButton"] > button {
+        width: 100%;
+    }
+
+    button[kind="primary"] { 
         background-color: #f97316 !important; 
         color: #ffffff !important; 
         border-color: #f97316 !important;
         border-radius: 8px !important; 
         font-weight: 600 !important; 
-        width: 100%;
         transition: all 0.3s ease;
     }
-    
-    .stButton > button:hover, 
-    div[data-testid="stButton"] > button:hover,
-    button[kind="secondary"]:hover {
+    button[kind="primary"]:hover {
         background-color: #ea580c !important; 
         border-color: #ea580c !important;
-        color: #ffffff !important;
-    }
-    
-    .stButton > button:focus:not(:active),
-    div[data-testid="stButton"] > button:focus:not(:active) {
-        color: #ffffff !important;
-        border-color: #f97316 !important;
     }
 
     /* ========================================= */
-    /* TOMBOL DOWNLOAD (ABU-ABU GELAP / SLATE)   */
-    /* ========================================= */
+    button[kind="secondary"] {
+        background-color: #ffffff !important;
+        color: #1f2937 !important;
+        border: 1px solid #e5e7eb !important;
+        border-radius: 8px !important;
+        font-weight: 500 !important;
+        transition: all 0.3s ease;
+    }
+    button[kind="secondary"]:hover {
+        border-color: #f97316 !important;
+        color: #f97316 !important;
+    }
+
+    /* EFEK HOVER HAPUS */
+    div[data-testid="column"]:nth-of-type(4) button[kind="secondary"]:hover {
+        background-color: #ef4444 !important;
+        border-color: #ef4444 !important;
+        color: #ffffff !important;
+    }
+            
+    /* ui download */
     div[data-testid="stDownloadButton"] > button {
         background-color: #1e293b !important; 
         color: #ffffff !important;
@@ -125,8 +133,8 @@ st.markdown("""
         border-radius: 8px !important;
         font-weight: 600 !important;
         transition: all 0.3s ease;
+        width: 100%;
     }
-    
     div[data-testid="stDownloadButton"] > button:hover {
         background-color: #0f172a !important; 
         border-color: #0f172a !important;
