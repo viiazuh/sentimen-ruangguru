@@ -26,6 +26,7 @@ st.markdown("""
     
     .stApp { background-color: #f7f9fc !important; color: #1f2937 !important; }
         
+
     /* Membesarkan SEMUA TEKS biasa (Paragraf, Info, metrik, dll) */
     .stApp p, .stApp div[data-testid="stText"], .stMarkdown p {
         font-size: 20px !important;
@@ -323,7 +324,7 @@ if menu == "Dashboard":
             
         st.markdown("<div style='font-size:16px; font-weight:600; margin-top:20px; margin-bottom:10px;'>Daftar Hasil Pengujian Sesi Aktif</div>", unsafe_allow_html=True)
         df_history = pd.DataFrame(reversed(st.session_state.prediction_history))
-        st.dataframe(df_history, use_container_width=True)
+        st.table(df_history)
             
     else:
         st.info("Belum ada data grafik maupun daftar pengujian tunggal pada sesi ini.")
@@ -404,7 +405,7 @@ if menu == "Dashboard":
         start_idx_db = st.session_state.page_dashboard * items_per_page_db
         end_idx_db = start_idx_db + items_per_page_db
         
-        st.dataframe(df_batch.iloc[start_idx_db:end_idx_db], use_container_width=True)
+        st.table(df_batch.iloc[start_idx_db:end_idx_db])
         
         col_prev_db, col_info_db, col_next_db = st.columns([1, 4, 1])
         with col_prev_db:
@@ -434,7 +435,7 @@ elif menu == "Data Management":
     if st.session_state.uploaded_df is not None:
         df_view = st.session_state.uploaded_df
         st.write(f"📁 **{st.session_state.uploaded_filename}** — {len(df_view)} baris")
-        st.dataframe(df_view.head(5), use_container_width=True)
+        st.table(df_view.head(5))
         
         if st.button("Jalankan Analisis Massal"):
             with st.spinner("Sedang menganalisis dataset secara massal..."):
@@ -504,8 +505,7 @@ elif menu == "Data Management":
             
         start_idx = st.session_state.page * items_per_page
         end_idx = start_idx + items_per_page
-        
-        st.dataframe(res_df.iloc[start_idx:end_idx], use_container_width=True)
+        st.table(res_df.iloc[start_idx:end_idx])
         
         col_prev, col_info, col_next = st.columns([1, 4, 1])
         with col_prev:
