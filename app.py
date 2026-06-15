@@ -40,14 +40,14 @@ st.markdown("""
 
     /* HEADER SIDEBAR */
     .sidebar-title {
-        font-size: 24px;
+        font-size: 26px;
         font-weight: 700;
         color: #1e293b;
         margin-bottom: 8px;
     }
     
     .sidebar-subtitle {
-        font-size: 16px;
+        font-size: 18px;
         color: #1e293b;
         margin-bottom: 40px;
         font-weight: 400;
@@ -55,29 +55,33 @@ st.markdown("""
 
     /* RADIO MENU STYLING */
     div.row-widget.stRadio > div {
-        gap: 15px; 
+        gap: 18px; 
     }
 
     [data-testid="stSidebar"] [data-testid="stWidgetLabel"] { display: none; }
 
     [data-testid="stSidebar"] label {
-        font-size: 18px !important;
+        font-size: 22px !important;
         font-weight: 400 !important;
         color: #000000 !important;
     }
 
     /* DASHBOARD & DATA MANAGEMENT METRIC CARD */
     .metric-card { 
-        background-color: white; 
-        padding: 20px; 
-        border-radius: 12px; 
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
-        border: 1px solid #f3f4f6; 
-        margin-bottom: 1rem; 
+        padding: 10px 0px; 
+        margin-bottom: 1rem;
     }
-    .metric-title { color: #6b7280; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; }
-    .metric-value { color: #1f2937; font-size: 1.75rem; font-weight: 700; }
-
+    .metric-title { 
+        color: #4b5563; 
+        font-size: 1.1rem; 
+        font-weight: 600; 
+        text-transform: uppercase; 
+    }
+    .metric-value { 
+        color: #1f2937; 
+        font-size: 2rem; 
+        font-weight: 700; 
+    }
     /* BUTTONS */
     .stButton>button { 
         background: #f97316 !important; 
@@ -464,12 +468,17 @@ elif menu == "Data Management":
 # --- PREDICTION ---
 elif menu == "Sentiment Prediction":
     st.markdown("<h2>Sentiment Prediction</h2>", unsafe_allow_html=True)
-    with st.container(border=True):
+    
+    # Border container dihapus agar tidak kaku
+    with st.container():
         input_text = st.text_area("Masukkan teks ulasan", placeholder="Contoh: Seru banget!", height=150)
         
         if st.button("Analisis"):
             if input_text.strip():
-                res, emo, conf = get_prediction(input_text)
+                # PENAMBAHAN UI LOADING (SPINNER)
+                with st.spinner("Sedang menganalisis sentimen..."):
+                    time.sleep(0.6) # Sedikit jeda agar animasi loading terlihat oleh user
+                    res, emo, conf = get_prediction(input_text)
                 
                 st.session_state.single_stats["total"] += 1
                 if res == "Positif": st.session_state.single_stats["positif"] += 1
