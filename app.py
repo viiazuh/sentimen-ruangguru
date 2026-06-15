@@ -56,11 +56,16 @@ st.markdown("""
     h3 { font-size: 30px !important; font-weight: 700 !important; }
     h4 { font-size: 26px !important; font-weight: 600 !important; }
             
-/* --- SIDEBAR CONTAINER (Dilebarkan sesuai saran tim) --- */
+/* --- SIDEBAR CONTAINER --- */
     [data-testid="stSidebar"] { 
         background-color: white !important; 
         border-right: 1px solid #e5e7eb !important;
-        min-width: 340px !important; /* Melebarkan sidebar ke kanan */
+    }
+    
+    /* Trik jitu: Melebarkan sidebar HANYA saat posisinya sedang terbuka */
+    [data-testid="stSidebar"][aria-expanded="true"] {
+        min-width: 350px !important;
+        max-width: 350px !important;
     }
     
     [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
