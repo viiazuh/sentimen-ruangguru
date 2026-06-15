@@ -25,6 +25,20 @@ st.markdown("""
     }
     
     .stApp { background-color: #f7f9fc !important; color: #1f2937 !important; }
+        
+    .stTextArea textarea {
+        font-size: 18px !important;
+    }
+
+    /* Membesarkan teks di dalam TABEL (Data Management) */
+    [data-testid="stDataFrame"], [data-testid="stTable"], table, th, td {
+        font-size: 16px !important;
+    }
+
+    /* Membesarkan judul-judul halaman */
+    h2 { font-size: 34px !important; font-weight: 700 !important; }
+    h3 { font-size: 26px !important; font-weight: 600 !important; }
+    h4 { font-size: 22px !important; font-weight: 600 !important; }
 
     /* SIDEBAR CONTAINER */
     [data-testid="stSidebar"] { 
