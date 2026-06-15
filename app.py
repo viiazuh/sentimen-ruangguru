@@ -86,46 +86,34 @@ st.markdown("""
         font-weight: 700; 
     }
 
-   /* ui button */
-    div[data-testid="stButton"] > button {
-        width: 100%;
-    }
-
-    button[kind="primary"] { 
+    /* TOMBOL ANALISIS & DOWNLOAD */
+    .stButton > button, 
+    div[data-testid="stButton"] > button,
+    button[kind="secondary"] { 
         background-color: #f97316 !important; 
         color: #ffffff !important; 
         border-color: #f97316 !important;
         border-radius: 8px !important; 
         font-weight: 600 !important; 
+        width: 100%;
         transition: all 0.3s ease;
     }
-    button[kind="primary"]:hover {
+    
+    .stButton > button:hover, 
+    div[data-testid="stButton"] > button:hover,
+    button[kind="secondary"]:hover {
         background-color: #ea580c !important; 
         border-color: #ea580c !important;
-    }
-
-    /* ========================================= */
-    button[kind="secondary"] {
-        background-color: #ffffff !important;
-        color: #1f2937 !important;
-        border: 1px solid #e5e7eb !important;
-        border-radius: 8px !important;
-        font-weight: 500 !important;
-        transition: all 0.3s ease;
-    }
-    button[kind="secondary"]:hover {
-        border-color: #f97316 !important;
-        color: #f97316 !important;
-    }
-
-    /* EFEK HOVER HAPUS */
-    div[data-testid="column"]:nth-of-type(4) button[kind="secondary"]:hover {
-        background-color: #ef4444 !important;
-        border-color: #ef4444 !important;
         color: #ffffff !important;
     }
-            
-    /* ui download */
+    
+    .stButton > button:focus:not(:active),
+    div[data-testid="stButton"] > button:focus:not(:active) {
+        color: #ffffff !important;
+        border-color: #f97316 !important;
+    }
+
+
     div[data-testid="stDownloadButton"] > button {
         background-color: #1e293b !important; 
         color: #ffffff !important;
@@ -133,8 +121,8 @@ st.markdown("""
         border-radius: 8px !important;
         font-weight: 600 !important;
         transition: all 0.3s ease;
-        width: 100%;
     }
+    
     div[data-testid="stDownloadButton"] > button:hover {
         background-color: #0f172a !important; 
         border-color: #0f172a !important;
@@ -402,7 +390,7 @@ elif menu == "Data Management":
         st.write(f"📁 **{st.session_state.uploaded_filename}** — {len(df_view)} baris")
         st.dataframe(df_view.head(5), use_container_width=True)
         
-        if st.button("Jalankan Analisis Massal", type="primary"):
+        if st.button("Jalankan Analisis Massal"):
             with st.spinner("Menganalisis..."):
                 text_col = next((c for c in ['text', 'ulasan', 'komentar', 'textDisplay'] if c in df_view.columns), df_view.columns[0])
                 texts = df_view[text_col].astype(str).tolist()
@@ -512,7 +500,7 @@ elif menu == "Sentiment Prediction":
     with st.container(border=True):
         input_text = st.text_area("Masukkan teks ulasan", placeholder="Contoh: Seru banget!", height=150)
         
-        if st.button("Analisis", type="primary"):
+        if st.button("Analisis"):
             if input_text.strip():
                 with st.spinner("Sedang menganalisis sentimen..."):
                     time.sleep(0.6) # Jeda animasi sebentar
