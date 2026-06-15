@@ -26,20 +26,35 @@ st.markdown("""
     
     .stApp { background-color: #f7f9fc !important; color: #1f2937 !important; }
         
+    /* Membesarkan SEMUA TEKS biasa (Paragraf, Info, metrik, dll) */
+    .stApp p, .stApp div[data-testid="stText"], .stMarkdown p {
+        font-size: 20px !important;
+    }
+
+    /* Membesarkan teks label input (seperti tulisan "Masukkan teks ulasan") */
+    .stApp label {
+        font-size: 22px !important;
+        font-weight: 600 !important;
+    }
+
+    /* Membesarkan teks saat mengetik di dalam kotak teks (Text Area) */
     .stTextArea textarea {
+        font-size: 20px !important;
+    }
+
+    /* Membesarkan teks di dalam TABEL (Data Management & Daftar History) */
+    [data-testid="stDataFrame"] * {
+        font-size: 18px !important; 
+    }
+    [data-testid="stTable"], table, th, td {
         font-size: 18px !important;
     }
 
-    /* Membesarkan teks di dalam TABEL (Data Management) */
-    [data-testid="stDataFrame"], [data-testid="stTable"], table, th, td {
-        font-size: 16px !important;
-    }
-
-    /* Membesarkan judul-judul halaman */
-    h2 { font-size: 34px !important; font-weight: 700 !important; }
-    h3 { font-size: 26px !important; font-weight: 600 !important; }
-    h4 { font-size: 22px !important; font-weight: 600 !important; }
-
+    /* Membesarkan judul-judul halaman agar lebih dominan */
+    h2 { font-size: 38px !important; font-weight: 800 !important; }
+    h3 { font-size: 30px !important; font-weight: 700 !important; }
+    h4 { font-size: 26px !important; font-weight: 600 !important; }
+            
     /* SIDEBAR CONTAINER */
     [data-testid="stSidebar"] { 
         background-color: white !important; 
@@ -118,8 +133,7 @@ st.markdown("""
     }
 
     /* ========================================= */
-    /* 2. TOMBOL UPLOAD FILE (Tidak Berwarna)    */
-    /* ========================================= */
+
     div[data-testid="stFileUploader"] button {
         background-color: #ffffff !important;
         color: #1f2937 !important;
@@ -164,9 +178,8 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# =========================================================================
+
 # DEFINISI  struktur untuk load file PKL agar pkl tidak error
-# =========================================================================
 class TextPreprocessor:
     def __init__(self, *args, **kwargs):
         pass
@@ -273,7 +286,7 @@ COLOR_MAP = {"Positif": "#3b82f6", "Negatif": "#ef4444", "Netral": "#9ca3af"}
 
 # --- SIDEBAR NAVIGATION ---
 with st.sidebar:
-    st.markdown('<div class="sidebar-title">Sentiment🙂</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-title">Sentiment</div>', unsafe_allow_html=True)
     st.markdown('<div class="sidebar-subtitle">Analisis Sentimen Ruangguru</div>', unsafe_allow_html=True)
     menu = st.radio("NAVIGATION", ["Dashboard", "Data Management", "Sentiment Prediction"])
 
