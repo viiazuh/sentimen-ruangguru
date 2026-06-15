@@ -56,44 +56,46 @@ st.markdown("""
     h3 { font-size: 30px !important; font-weight: 700 !important; }
     h4 { font-size: 26px !important; font-weight: 600 !important; }
             
-    /* SIDEBAR CONTAINER */
+/* --- SIDEBAR CONTAINER (Dilebarkan sesuai saran tim) --- */
     [data-testid="stSidebar"] { 
         background-color: white !important; 
-        border-right: 1px solid #e5e7eb !important; 
+        border-right: 1px solid #e5e7eb !important;
+        min-width: 340px !important; /* Melebarkan sidebar ke kanan */
     }
     
     [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
-        padding-left: 1.5rem;
-        padding-right: 1.5rem;
-        padding-top: 2rem;
+        padding-left: 2rem;
+        padding-right: 2rem;
+        padding-top: 2.5rem;
     }
 
-    /* HEADER SIDEBAR */
+    /* --- HEADER SIDEBAR --- */
     .sidebar-title {
-        font-size: 40px;
-        font-weight: 700;
+        font-size: 34px; /* Diturunkan sedikit agar pas */
+        font-weight: 800;
         color: #1e293b;
-        margin-bottom: 8px;
+        margin-bottom: 4px;
+        letter-spacing: -0.5px;
     }
     
     .sidebar-subtitle {
-        font-size: 25px;
-        color: #1e293b;
-        margin-bottom: 40px;
-        font-weight: 400;
+        font-size: 18px; /* Dikecilkan agar muat 1 baris */
+        color: #64748b; /* Dibuat abu-abu agar lebih elegan & kontras dengan menu */
+        margin-bottom: 45px;
+        font-weight: 500;
     }
 
-    /* RADIO MENU STYLING */
+    /* --- RADIO MENU STYLING --- */
     div.row-widget.stRadio > div {
-        gap: 18px; 
+        gap: 16px; 
     }
 
     [data-testid="stSidebar"] [data-testid="stWidgetLabel"] { display: none; }
 
     [data-testid="stSidebar"] label {
-        font-size: 25px !important;
-        font-weight: 400 !important;
-        color: #000000 !important;
+        font-size: 20px !important; /* Diturunkan dari 25px ke 20px (tetap besar dan jelas) */
+        font-weight: 600 !important; /* Ditebalkan agar terasa interaktif */
+        color: #334155 !important;
     }
     /* DASHBOARD & DATA MANAGEMENT METRIC CARD */
     .metric-card { 
