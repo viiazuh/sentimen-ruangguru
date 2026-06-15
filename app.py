@@ -81,28 +81,39 @@ st.markdown("""
         text-transform: uppercase; 
     }
     .metric-value { 
+    .metric-value { 
         color: #1f2937; 
-        font-size: 2rem; /* Diperbesar dari 1.75rem */
+        font-size: 2rem; 
         font-weight: 700; 
     }
-    }
-    /* BUTTONS */
-    .stButton>button { 
-        background: #f97316 !important; 
-        color: white !important; 
+
+    /* TOMBOL UTAMA: ANALISIS (ORANYE) */
+    div[data-testid="stButton"] > button { 
+        background-color: #f97316 !important; 
+        color: #ffffff !important; 
         border-radius: 8px !important; 
         font-weight: 600 !important; 
         border: none !important;
         width: 100%;
+        transition: all 0.3s ease;
     }
-    
-    /* Tombol Download Khusus agar lebih kecil/rapi */
-    [data-testid="stDownloadButton"] > button {
-        background: #ffffff !important;
-        color: #1f2937 !important;
-        border: 1px solid #e5e7eb !important;
+    div[data-testid="stButton"] > button:hover {
+        background-color: #ea580c !important; 
+        color: #ffffff !important;
+    }
+
+    /* TOMBOL DOWNLOAD (ABU-ABU GELAP / SLATE) */
+    div[data-testid="stDownloadButton"] > button {
+        background-color: #1e293b !important; 
+        color: #ffffff !important;
+        border: none !important;
         border-radius: 8px !important;
-        font-weight: 500 !important;
+        font-weight: 600 !important;
+        transition: all 0.3s ease;
+    }
+    div[data-testid="stDownloadButton"] > button:hover {
+        background-color: #0f172a !important; 
+        color: #ffffff !important;
     }
     </style>
     """, unsafe_allow_html=True)
