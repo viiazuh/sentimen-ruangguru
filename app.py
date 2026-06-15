@@ -402,7 +402,7 @@ elif menu == "Data Management":
         st.write(f"📁 **{st.session_state.uploaded_filename}** — {len(df_view)} baris")
         st.dataframe(df_view.head(5), use_container_width=True)
         
-        if st.button("Jalankan Analisis Massal", type="primary"):
+        if st.button("Jalankan Analisis Massal"):
             with st.spinner("Menganalisis..."):
                 text_col = next((c for c in ['text', 'ulasan', 'komentar', 'textDisplay'] if c in df_view.columns), df_view.columns[0])
                 texts = df_view[text_col].astype(str).tolist()
@@ -451,7 +451,7 @@ elif menu == "Data Management":
 
     if st.session_state.dataset is not None:
         st.divider()
-        st.subheader("Hasil Analisis",type="primary")
+        st.subheader("Hasil Analisis")
         
         res_df = st.session_state.dataset
         total_n = len(res_df)
@@ -512,7 +512,7 @@ elif menu == "Sentiment Prediction":
     with st.container(border=True):
         input_text = st.text_area("Masukkan teks ulasan", placeholder="Contoh: Seru banget!", height=150)
         
-        if st.button("Analisis"):
+        if st.button("Analisis", type="primary"):
             if input_text.strip():
                 with st.spinner("Sedang menganalisis sentimen..."):
                     time.sleep(0.6) # Jeda animasi sebentar
