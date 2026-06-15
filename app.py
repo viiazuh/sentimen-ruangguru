@@ -65,22 +65,26 @@ st.markdown("""
         font-weight: 400 !important;
         color: #000000 !important;
     }
-
     /* DASHBOARD & DATA MANAGEMENT METRIC CARD */
     .metric-card { 
-        padding: 10px 0px; 
-        margin-bottom: 1rem;
+        background-color: white; 
+        padding: 20px; 
+        border-radius: 12px; 
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
+        border: 1px solid #f3f4f6; 
+        margin-bottom: 1rem; 
     }
     .metric-title { 
-        color: #4b5563; 
-        font-size: 1.1rem; 
+        color: #6b7280; 
+        font-size: 1.1rem; /* Diperbesar dari 0.85rem */
         font-weight: 600; 
         text-transform: uppercase; 
     }
     .metric-value { 
         color: #1f2937; 
-        font-size: 2rem; 
+        font-size: 2rem; /* Diperbesar dari 1.75rem */
         font-weight: 700; 
+    }
     }
     /* BUTTONS */
     .stButton>button { 
@@ -469,15 +473,13 @@ elif menu == "Data Management":
 elif menu == "Sentiment Prediction":
     st.markdown("<h2>Sentiment Prediction</h2>", unsafe_allow_html=True)
     
-    # Border container dihapus agar tidak kaku
-    with st.container():
+    with st.container(border=True):
         input_text = st.text_area("Masukkan teks ulasan", placeholder="Contoh: Seru banget!", height=150)
         
         if st.button("Analisis"):
             if input_text.strip():
-                # PENAMBAHAN UI LOADING (SPINNER)
                 with st.spinner("Sedang menganalisis sentimen..."):
-                    time.sleep(0.6) # Sedikit jeda agar animasi loading terlihat oleh user
+                    time.sleep(0.6) # Jeda animasi sebentar
                     res, emo, conf = get_prediction(input_text)
                 
                 st.session_state.single_stats["total"] += 1
