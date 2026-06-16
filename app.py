@@ -334,7 +334,7 @@ if menu == "Dashboard":
         st.table(df_history)
             
     else:
-        st.info("Belum ada data grafik maupun daftar pengujian tunggal pada sesi ini.")
+        st.info("Belum ada data grafik maupun daftar pengujian pada sesi ini.")
 
     if st.session_state.dataset is not None:
         st.divider()
@@ -384,10 +384,10 @@ if menu == "Dashboard":
         with b3: st.markdown(f'<div class="metric-card"><div class="metric-title">Negatif 😞</div><div class="metric-value">{batch_neg}</div></div>', unsafe_allow_html=True)
         with b4: st.markdown(f'<div class="metric-card"><div class="metric-title">Netral 😐</div><div class="metric-value">{batch_net}</div></div>', unsafe_allow_html=True)
         
-        st.markdown("<div style='font-size:16px; font-weight:600; margin-bottom:10px; margin-top:10px;'>Grafik Sentimen File Upload</div>", unsafe_allow_html=True)
+        st.markdown("<div style='font-size:16px; font-weight:600; margin-bottom:10px; margin-top:10px;'>Aktivitas Terbaru</div>", unsafe_allow_html=True)
         df_batch_chart = pd.DataFrame({
             "Sentimen": ["Positif", "Negatif", "Netral"],
-            "Jumlah Data": [batch_pos, batch_neg, batch_net]
+            "Jumlah Data": [batch_pos, batch_neg, batch_net]    
         })
         
         col_bar_batch, col_pie_batch = st.columns(2)
