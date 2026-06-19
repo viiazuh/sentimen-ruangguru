@@ -203,6 +203,20 @@ class KerasPredictor:
         return text
     def fit(self, X, y=None):
         return self
+
+# --- FUNGSI PREPROCESSING TEKS ---
+# PENTING: Sesuaikan fungsi ini agar SAMA PERSIS dengan preprocessing di Colab!
+# Jika di Colab ada stemming, slang normalization, dll, tambahkan juga di sini.
+def preprocess_text(text):
+    """Membersihkan teks agar sesuai dengan format saat training model."""
+    text = str(text).lower()
+    text = re.sub(r'http\S+|www\.\S+', '', text)   # Hapus URL
+    text = re.sub(r'@\w+', '', text)                # Hapus mention (@user)
+    text = re.sub(r'#\w+', '', text)                # Hapus hashtag
+    text = re.sub(r'[^\w\s]', '', text)              # Hapus tanda baca
+    text = re.sub(r'\d+', '', text)                  # Hapus angka
+    text = re.sub(r'\s+', ' ', text).strip()         # Hapus spasi berlebih
+    return text
     
 # --- SESSION STATE INITIALIZATION ---
 if 'dataset' not in st.session_state: st.session_state.dataset = None
@@ -261,14 +275,16 @@ def find_keras_tokenizer(obj, depth=0):
     return None
 
 def extract_sequences(pipeline, texts_list):
-    """Mengekstraksi token secara aman, disamakan persis dengan Colab (.lower() saja)"""
-    # Regex re.sub dihapus agar inputnya sama persis dengan Colab
-    clean_texts = [str(t).lower() for t in texts_list]
+    """Mengekstraksi token secara aman, dengan preprocessing yang sama seperti saat training."""
+    # Terapkan preprocessing yang sama seperti di Colab
+    clean_texts = [preprocess_text(t) for t in texts_list]
     tokenizer = find_keras_tokenizer(pipeline)
     
     if tokenizer:
         seqs = tokenizer.texts_to_sequences(clean_texts)
-        return seqs if seqs else [[0]]
+        # Jika semua sequence kosong, kembalikan [[0]] sebagai fallback
+        seqs = [s if len(s) > 0 else [0] for s in seqs]
+        return seqs
     return None
 
 def get_prediction(text):
