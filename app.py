@@ -204,18 +204,6 @@ class KerasPredictor:
     def fit(self, X, y=None):
         return self
 
-# --- STEMMER (Sastrawi) ---
-@st.cache_resource
-def load_stemmer():
-    try:
-        from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
-        return StemmerFactory().createStemmer()
-    except Exception as e:
-        st.warning(f"Stemmer Sastrawi tidak tersedia: {e}. Berjalan tanpa stemming.")
-        return None
-
-stemmer = load_stemmer()
-
 # --- FUNGSI PREPROCESSING TEKS ---
 def preprocess_text(text):
     """Membersihkan teks agar sesuai dengan format saat training model."""
@@ -225,9 +213,7 @@ def preprocess_text(text):
     text = re.sub(r'#\w+', '', text)                
     text = re.sub(r'[^\w\s]', '', text)              
     text = re.sub(r'\d+', '', text)                  
-    text = re.sub(r'\s+', ' ', text).strip()
-    if stemmer:
-        text = stemmer.stem(text)
+    text = re.sub(r'\s+', ' ', text).strip()         
     return text
     
 # --- SESSION STATE INITIALIZATION ---
