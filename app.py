@@ -204,18 +204,23 @@ class KerasPredictor:
     def fit(self, X, y=None):
         return self
 
+# --- STEMMER (Sastrawi) ---
+from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
+stemmer = StemmerFactory().createStemmer()
+
 # --- FUNGSI PREPROCESSING TEKS ---
-# PENTING: Sesuaikan fungsi ini agar SAMA PERSIS dengan preprocessing di Colab!
-# Jika di Colab ada stemming, slang normalization, dll, tambahkan juga di sini.
+# Preprocessing ini harus SAMA PERSIS dengan yang dipakai saat training di Colab
 def preprocess_text(text):
     """Membersihkan teks agar sesuai dengan format saat training model."""
     text = str(text).lower()
-    text = re.sub(r'http\S+|www\.\S+', '', text)   # Hapus URL
-    text = re.sub(r'@\w+', '', text)                # Hapus mention (@user)
-    text = re.sub(r'#\w+', '', text)                # Hapus hashtag
-    text = re.sub(r'[^\w\s]', '', text)              # Hapus tanda baca
-    text = re.sub(r'\d+', '', text)                  # Hapus angka
-    text = re.sub(r'\s+', ' ', text).strip()         # Hapus spasi berlebih
+    text = re.sub(r'http\S+|www\.\S+', '', text)  
+    text = re.sub(r'@\w+', '', text)                
+    text = re.sub(r'#\w+', '', text)                
+    text = re.sub(r'[^\w\s]', '', text)              
+    text = re.sub(r'\d+', '', text)                  
+    text = re.sub(r'\s+', ' ', text).strip()
+    # Stemming (Sastrawi)
+    text = stemmer.stem(text)
     return text
     
 # --- SESSION STATE INITIALIZATION ---
@@ -282,7 +287,6 @@ def extract_sequences(pipeline, texts_list):
     
     if tokenizer:
         seqs = tokenizer.texts_to_sequences(clean_texts)
-        # Jika semua sequence kosong, kembalikan [[0]] sebagai fallback
         seqs = [s if len(s) > 0 else [0] for s in seqs]
         return seqs
     return None
