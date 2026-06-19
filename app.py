@@ -204,12 +204,7 @@ class KerasPredictor:
     def fit(self, X, y=None):
         return self
 
-# --- STEMMER (Sastrawi) ---
-from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
-stemmer = StemmerFactory().createStemmer()
-
 # --- FUNGSI PREPROCESSING TEKS ---
-# Preprocessing ini harus SAMA PERSIS dengan yang dipakai saat training di Colab
 def preprocess_text(text):
     """Membersihkan teks agar sesuai dengan format saat training model."""
     text = str(text).lower()
@@ -218,9 +213,7 @@ def preprocess_text(text):
     text = re.sub(r'#\w+', '', text)                
     text = re.sub(r'[^\w\s]', '', text)              
     text = re.sub(r'\d+', '', text)                  
-    text = re.sub(r'\s+', ' ', text).strip()
-    # Stemming (Sastrawi)
-    text = stemmer.stem(text)
+    text = re.sub(r'\s+', ' ', text).strip()         
     return text
     
 # --- SESSION STATE INITIALIZATION ---
@@ -296,8 +289,6 @@ def get_prediction(text):
         try:
             seq = extract_sequences(pipeline_ml, [text])
             if seq is None: return "Error Tokenizer", "⚠️", 0
-            
-            # PERBAIKAN 1: maxlen jadi 32 & truncating='post' sesuai Colab
             padded = tf.keras.preprocessing.sequence.pad_sequences(seq, maxlen=32, padding='post', truncating='post')
             prediction = model_ml.predict(padded, verbose=0)
             
