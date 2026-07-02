@@ -363,7 +363,7 @@ if menu == "Dashboard":
             
             st.markdown(f"""
                 <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 30px; border-radius: 12px; text-align: center; color: white; margin-bottom: 20px;">
-                    <h3 style="margin: 0; font-size: 1.5rem; font-weight: 500;">probabilitas</h3>
+                    <h3 style="margin: 0; font-size: 1.5rem; font-weight: 500;">Probabilitas</h3>
                     <h1 style="margin: 0; font-size: 4.5rem; font-weight: 800;">{accuracy_val:.1f}%</h1>
                     <p style="margin: 0; font-size: 1.1rem; opacity: 0.9;">File: {filename} ({batch_total} Baris Data)</p>
                 </div>
