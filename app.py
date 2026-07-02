@@ -363,7 +363,7 @@ if menu == "Dashboard":
             
             st.markdown(f"""
                 <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 30px; border-radius: 12px; text-align: center; color: white; margin-bottom: 20px;">
-                    <h3 style="margin: 0; font-size: 1.5rem; font-weight: 500;">Probabilitas</h3>
+                    <h3 style="margin: 0; font-size: 1.5rem; font-weight: 500;">probabilitas</h3>
                     <h1 style="margin: 0; font-size: 4.5rem; font-weight: 800;">{accuracy_val:.1f}%</h1>
                     <p style="margin: 0; font-size: 1.1rem; opacity: 0.9;">File: {filename} ({batch_total} Baris Data)</p>
                 </div>
@@ -371,7 +371,8 @@ if menu == "Dashboard":
             
             st.markdown("<h4>Confusion Matrix Hasil Analisis Massal</h4>", unsafe_allow_html=True)
             
-            categories = ['Positif', 'Negatif', 'Netral']
+            # PERBAIKAN 1: Urutan kategori disamakan dengan standar akademis
+            categories = ['Negatif', 'Netral', 'Positif']
             df_batch['Label Asli'] = pd.Categorical(df_batch['Label Asli'], categories=categories)
             df_batch['Sentimen'] = pd.Categorical(df_batch['Sentimen'], categories=categories)
             
@@ -382,7 +383,14 @@ if menu == "Dashboard":
             y_dynamic = [f"Aktual {r}" for r in ct.index]
             
             fig_cm = ff.create_annotated_heatmap(z_dynamic, x=x_dynamic, y=y_dynamic, colorscale='Blues', showscale=True)
-            fig_cm.update_layout(height=400, margin=dict(l=20, r=20, t=20, b=20), font=dict(size=14))
+            
+            # PERBAIKAN 2: Menambahkan yaxis=dict(autorange="reversed") agar dibaca dari atas ke bawah
+            fig_cm.update_layout(
+                height=400, 
+                margin=dict(l=20, r=20, t=20, b=20), 
+                font=dict(size=14),
+                yaxis=dict(autorange="reversed") 
+            )
             st.plotly_chart(fig_cm, use_container_width=True)
             st.divider()
         # --- AKHIR FITUR CONFUSION MATRIX ---
